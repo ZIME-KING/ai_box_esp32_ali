@@ -1,0 +1,10 @@
+{
+    "idf.openOcdConfigs": [
+        "board/esp32s3-builtin.cfg"
+    ],
+    "cmake.sourceDirectory": "C:/Users/king/Desktop/AI_BOX/V0.0.3-02C-20250623_ESP32S3/example/esp32s3",
+    "idf.espIdfPathWin": "c:\\Users\\king\\esp\\v5.5\\esp-idf",
+    "idf.toolsPathWin": "d:\\Espressif\\tools",
+    "idf.pythonInstallPath": "d:\\Espressif\\tools\\tools\\idf-python\\3.11.2\\python.exe",
+    "idf.flashType": "UART"
+}

@@ -1,0 +1,16 @@
+menu "Test Configuration"
+
+config TEST_OPTION_ENABLE
+    bool "Enable test option"
+    default n
+    help
+        Enable this option to test if Kconfig.projbuild works.
+
+config TEST_STRING_OPTION
+    string "Test string option"
+    default "test string"
+    depends on TEST_OPTION_ENABLE
+    help
+        This is a test string option.
+
+endmenu

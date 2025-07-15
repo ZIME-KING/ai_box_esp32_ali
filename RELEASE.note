@@ -1,0 +1,6 @@
+[SDK V0.0.2]
+1. 增加PushToTalk打断功能
+
+[SDK V0.0.1]
+1. 实现百炼语音对话PushToTalk模式
+2. 实现esp32s3开发板运行演示

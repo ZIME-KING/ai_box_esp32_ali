@@ -1,0 +1,93 @@
+/*
+ * Copyright 2025 Alibaba Group Holding Limited
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef CONVSDK_CONV_CODE_H
+#define CONVSDK_CONV_CODE_H
+
+typedef enum {
+  CONV_SUCCESS = 0,
+
+  /* Common errors 10 - 99 */
+  CONV_ERR_DEFAULT = 10,
+  CONV_ERR_MEM_ALLOC_FAILED,
+  CONV_ERR_JSON_PARSE_FAILED,
+  CONV_ERR_DEAD_LOCK,
+  CONV_ERR_TRY_AGAIN,
+  CONV_ERR_NOT_FOUND,
+  CONV_ERR_BUSY,
+
+  /* Invoking errors 50 - 99 */
+  CONV_ERR_INIT_FAILED = 50,
+  CONV_ERR_NOT_CONNECTED,
+  CONV_ERR_ENGINE_NULL,
+  CONV_ERR_ILLEGAL_PARAM,
+  CONV_ERR_ILLEGAL_INIT_PARAM,
+  CONV_ERR_INVALID_STATE,
+  CONV_ERR_HAS_INVOKED,
+  CONV_ERR_NOT_CREATE_CONVERSATION,
+  CONV_ERR_SKIP_SEND_DATA,
+  CONV_ERR_SEND_DATA_FAILED,
+  CONV_ERR_INVALID_AUDIO_DATA = 60,
+  CONV_ERR_STOP_FAILED,
+  CONV_ERR_CANCEL_FAILED,
+  CONV_ERR_INVOKE_TIMEOUT,
+  CONV_ERR_REQUEST_DENIED,
+  CONV_ERR_REQUEST_ACCEPTED,
+  CONV_ERR_SKIP_DESTROY_CONVERSATION,
+  CONV_ERR_INVOKE_INVALID_ACTION,
+
+  /* Conversation event errors 200 - 299 */
+  CONV_ERR_EMPTY_CONV_ERR_EVENT = 200,
+  CONV_ERR_INVALID_CONV_ERR_EVENT_MSG_TYPE,
+
+  /* Network errors 300 - 399 */
+  CONV_ERR_WS_CONNECT_FAILED = 300,  // Useless
+  CONV_ERR_SERVER_NOT_ACCESS,
+  CONV_ERR_AUTH_FAILED,            // Useless
+  CONV_ERR_CLOSE_SOCKET_FAILED,    // Useless
+  CONV_ERR_SERVER_INTERNAL_ERROR,  // Useless
+  CONV_ERR_NO_SUPPORT_MODE = 310,
+  CONV_ERR_JSON_FORMAT_ERROR,
+  CONV_ERR_SSL_ERROR,
+  CONV_ERR_SSL_CONNECT_FAILED,
+  CONV_ERR_HTTP_CONNECT_FAILED,
+  CONV_ERR_DNS_FAILED,
+  CONV_ERR_SOCKET_CLOSED,    // Useless
+  CONV_ERR_PING_NO_SUPPORT,  // Useless
+  CONV_ERR_UTF8_ERROR,
+  CONV_ERR_SYSTEM_CALL_FAILED,
+  CONV_ERR_PROTOCOL_ERROR,
+  CONV_ERR_PARAMETERS_ERROR,  // Useless
+  CONV_ERR_HTTPDNS_FAILED_WARNING,
+
+  /* Request errors 350 - 399 */
+  CONV_ERR_REQ_IS_NULLPTR = 350,
+  CONV_ERR_REQ_INVOKE_TIMEOUT,
+  CONV_ERR_REQ_START_FAILED,
+  CONV_ERR_REQ_STOP_FAILED,
+  CONV_ERR_REQ_CANCEL_FAILED,
+  CONV_ERR_REQ_START_INBOUND_FAILED,
+  CONV_ERR_REQ_STOP_INBOUND_FAILED,
+  CONV_ERR_REQ_STOP_OUTBOUND_FAILED,
+  CONV_ERR_REQ_CANCEL_BOUND_FAILED,
+  CONV_ERR_REQ_SET_PARAMS_FAILED,
+  CONV_ERR_REQ_SEND_AUDIO_FAILED = 360,
+  CONV_ERR_REQ_CONTROL_FAILED,
+
+  CONV_ERR_MAX_RET_CODE = 999,
+} conv_ret_code_t;
+
+#endif  // CONVSDK_CONV_CODE_H

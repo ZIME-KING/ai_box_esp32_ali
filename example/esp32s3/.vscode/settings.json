@@ -1,0 +1,25 @@
+{
+    "idf.espIdfPathWin": "c:\\Espressif\\frameworks\\esp-idf-v5.4.2",
+    "idf.toolsPathWin": "c:\\Espressif\\tools",
+    "idf.pythonInstallPath": "c:\\Espressif\\tools\\tools\\idf-python\\3.11.2\\python.exe",
+    "files.associations": {
+        "my_es8388.h": "c",
+        "i2c.h": "c",
+        "esp_attr.h": "c",
+        "esp_log.h": "c",
+        "lcd.h": "c",
+        "spi.h": "c",
+        "xl9555.h": "c",
+        "es8388.h": "c",
+        "lcd_show.h": "c",
+        "i2s.h": "c",
+        "audio_controller.h": "c",
+        "audio_common.h": "c",
+        "audio_element.h": "c",
+        "format": "c"
+    },
+    "files.encoding": "utf8",
+    "files.autoGuessEncoding": false,
+    "idf.portWin": "COM112",
+    "idf.flashType": "UART"
+}
