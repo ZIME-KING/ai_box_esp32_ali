@@ -1,4 +1,4 @@
-/* * Data converted from C:/Users/king/Desktop/AI_BOX/V0.0.3-02C-20250623_ESP32S3/example/esp32s3/build/esp-idf/mbedtls/x509_crt_bundle
+/* * Data converted from C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/build/esp-idf/mbedtls/x509_crt_bundle
  */
 .data
 #if !defined (__APPLE__) && !defined (__linux__)

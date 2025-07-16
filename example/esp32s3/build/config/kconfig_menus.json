@@ -6617,6 +6617,16 @@
                         "range": null,
                         "title": "ESP32-P4-FUNCTION-EV-SUB-BOARD",
                         "type": "bool"
+                    },
+                    {
+                        "children": [],
+                        "depends_on": "<choice AUDIO_BOARD>",
+                        "help": null,
+                        "id": "ESP32_S3_ES8311_BOARD",
+                        "name": "ESP32_S3_ES8311_BOARD",
+                        "range": null,
+                        "title": "ESP32_S3_ES8311",
+                        "type": "bool"
                     }
                 ],
                 "depends_on": null,

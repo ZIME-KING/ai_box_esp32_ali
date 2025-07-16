@@ -1,7 +1,7 @@
 {
-    "idf.espIdfPathWin": "c:\\Espressif\\frameworks\\esp-idf-v5.4.2",
-    "idf.toolsPathWin": "c:\\Espressif\\tools",
-    "idf.pythonInstallPath": "c:\\Espressif\\tools\\tools\\idf-python\\3.11.2\\python.exe",
+    "idf.espIdfPathWin": "d:\\v5.4.2\\esp-idf",
+    "idf.toolsPathWin": "D:\\Espressif",
+    "idf.pythonInstallPath": "D:\\Espressif\\tools\\idf-python\\3.11.2\\python.exe",
     "files.associations": {
         "my_es8388.h": "c",
         "i2c.h": "c",

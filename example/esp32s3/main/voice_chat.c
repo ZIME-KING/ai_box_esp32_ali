@@ -549,17 +549,17 @@ void board_dnesp32s3_init() {
 
   //my_spi_init(); /* SPI初始化 */
   key_init();    /* KEY初始化 */
-  i2c_init();  /* MYIIC初始化 */
+ // i2c_init();  /* MYIIC初始化 */
   //xl9555_init(); /* XL9555初始化 */
   //spilcd_init(); /* SPILCD初始化 */
 
-  /* ES8388初始化 */
-  while (es8388_init()) {
-    //spilcd_show_string(30, 110, 200, 16, 16, "ES8388 Error", RED);
-    vTaskDelay(pdMS_TO_TICKS(200));
-    //spilcd_fill(30, 110, 239, 126, WHITE);
-    vTaskDelay(pdMS_TO_TICKS(200));
-  }
+  // /* ES8388初始化 */
+  // while (es8388_init()) {
+  //   //spilcd_show_string(30, 110, 200, 16, 16, "ES8388 Error", RED);
+  //   vTaskDelay(pdMS_TO_TICKS(200));
+  //   //spilcd_fill(30, 110, 239, 126, WHITE);
+  //   vTaskDelay(pdMS_TO_TICKS(200));
+  // }
 
 //   xl9555_pin_write(SPK_EN_IO, 0); /* 打开喇叭 */
 

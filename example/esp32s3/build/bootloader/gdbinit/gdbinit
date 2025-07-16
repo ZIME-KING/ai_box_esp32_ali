@@ -1,2 +1,2 @@
-source C:/Users/king/Desktop/AI_BOX/V0.0.3-02C-20250623_ESP32S3/example/esp32s3/build/bootloader/gdbinit/symbols
-source C:/Users/king/Desktop/AI_BOX/V0.0.3-02C-20250623_ESP32S3/example/esp32s3/build/bootloader/gdbinit/connect
+source C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/build/bootloader/gdbinit/symbols
+source C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/build/bootloader/gdbinit/connect

@@ -173,6 +173,7 @@
     "ESP32_S3_BOX_3_BOARD": true,
     "ESP32_S3_BOX_BOARD": false,
     "ESP32_S3_BOX_LITE_BOARD": false,
+    "ESP32_S3_ES8311_BOARD": false,
     "ESP32_S3_KORVO2L_V1_BOARD": false,
     "ESP32_S3_KORVO2_V3_BOARD": false,
     "ESPHID_TASK_SIZE_BLE": 4096,
