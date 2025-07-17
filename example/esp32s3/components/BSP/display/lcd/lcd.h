@@ -39,15 +39,19 @@
 #define LCD_DC_PIN          GPIO_NUM_40
 #define LCD_CS_PIN          GPIO_NUM_21
 
-#define LCD_PWR(x)          do { x ?                                \
-                                 xl9555_pin_write(SLCD_PWR_IO, 1):  \
-                                 xl9555_pin_write(SLCD_PWR_IO, 0);  \
-                            } while(0)
+#define LCD_PWR(x)              
+#define LCD_RST(x)
 
-#define LCD_RST(x)          do { x ?                                 \
-                                 xl9555_pin_write(SLCD_RST_IO, 1):   \
-                                 xl9555_pin_write(SLCD_RST_IO, 0);   \
-                            } while(0)
+
+// #define LCD_PWR(x)          do { x ?                               
+//                                  xl9555_pin_write(SLCD_PWR_IO, 1):  
+//                                  xl9555_pin_write(SLCD_PWR_IO, 0); 
+//                             } while(0)
+
+// #define LCD_RST(x)          do { x ?                                
+//                                  xl9555_pin_write(SLCD_RST_IO, 1):   
+//                                  xl9555_pin_write(SLCD_RST_IO, 0);  
+//                             } while(0)
 
 #define LCD_HOST            SPI2_HOST
 

@@ -59,146 +59,324 @@ int recorder_deinit() {
 int recorder_reset() { return 0; }
 
 static void recorder_chip_start() {
-  if (audio_ctrl->codec_dev == NULL) {
-      // 创建数据接口（I2S）
-      audio_codec_data_if_t *data_if = NULL;
-      audio_codec_i2s_cfg_default_t i2s_cfg = {
-          .rx_handle = i2s_keep[0]->rx_handle,
-          .tx_handle = i2s_keep[0]->tx_handle,
-      };
-      data_if = audio_codec_new_i2s_data(&i2s_cfg);
-      if (data_if == NULL) {
-          ESP_LOGE(TAG, "Failed to create I2S data interface");
-          return;
-      }
-      audio_ctrl->data_if = data_if;
-  
-      // 创建控制接口（I2C）
-      audio_codec_i2c_cfg_t i2c_cfg = {
-          .port = I2C_NUM_0,
-          .addr = ES8311_CODEC_DEFAULT_ADDR,
-      };
-      audio_ctrl->ctrl_if = audio_codec_new_i2c_ctrl(&i2c_cfg);
-      if (audio_ctrl->ctrl_if == NULL) {
-          ESP_LOGE(TAG, "Failed to create I2C control interface");
-          goto err_ctrl_if;
-      }
+  es8388_adda_cfg(0, 1);    /* 开启ADC */
+  es8388_input_cfg(0);      /* 开启输入通道(通道1,MIC所在通道) */
+  es8388_mic_gain(8);       /* MIC增益设置为最大 */
+  es8388_alc_ctrl(1, 6, 6); /* 开启右通道ALC控制,以提高录音音量 */
+  es8388_output_cfg(0, 0); /* 关闭通道1和2的输出 */
+  es8388_spkvol_set(0);    /* 关闭喇叭. */
+  es8388_i2s_cfg(0, 3);    /* 飞利浦标准,16位数据长度 */
+}
 
-      // 创建 GPIO 接口
-      audio_codec_gpio_if_cfg_t gpio_cfg = {
-          .reset_gpio = GPIO_NUM_48,  // ES8311 reset pin
-          .mute_gpio = GPIO_NUM_NC,   // No mute pin
-          .record_led_gpio = GPIO_NUM_NC,  // No record LED
-          .play_led_gpio = GPIO_NUM_NC,    // No play LED
-      };
-      audio_ctrl->gpio_if = audio_codec_new_gpio(&gpio_cfg);
-      if (audio_ctrl->gpio_if == NULL) {
-          ESP_LOGE(TAG, "Failed to create GPIO interface");
-          goto err_gpio_if;
-      }
-  
-      // 创建编解码器接口
-      audio_codec_if_t *codec_if = audio_codec_new_es8311();
-      if (codec_if == NULL) {
-          ESP_LOGE(TAG, "Failed to create ES8311 codec interface");
-          goto err_codec_if;
-      }
-      audio_ctrl->codec_if = codec_if;
+void recorder_start() {
+  xSemaphoreTakeRecursive(audio_ctrl->recorder_lock, portMAX_DELAY);
+  ESP_LOGI(TAG, "recoder_start status: 0x%x/0x%x", audio_ctrl->codec_status,
+           audio_ctrl->recorder_status);
+  if ((audio_ctrl->codec_status & 0x01) == 0x00) {
+    myi2s_init(audio_ctrl->recorder_sr); /* 初始化用于录音和播放的i2s */
+    audio_ctrl->codec_status |= 0x01;
+  }
 
-      // 创建编解码器设备
-      esp_codec_dev_cfg_t dev_cfg = {
-          .codec_if = codec_if,
-          .ctrl_if = audio_ctrl->ctrl_if,
-          .data_if = audio_ctrl->data_if,
-          .gpio_if = audio_ctrl->gpio_if,
-      };
-      esp_codec_dev_handle_t codec_dev = esp_codec_dev_new(&dev_cfg);
-      if (codec_dev == NULL) {
-          ESP_LOGE(TAG, "Failed to create codec device");
-          goto err_codec_dev;
-      }
-      audio_ctrl->codec_dev = codec_dev;
+  recorder_chip_start();
 
-      // 配置录音参数
-      esp_codec_dev_sample_info_t fs = {
-          .sample_rate = audio_ctrl->recorder_sr,
-          .channel = 2,
-          .bits_per_sample = 16,
-      };
-      esp_codec_dev_set_in_channel_gain(codec_dev, ESP_CODEC_DEV_CHANNEL_LEFT | ESP_CODEC_DEV_CHANNEL_RIGHT, 0);
-      esp_codec_dev_sample_info_set(codec_dev, ESP_CODEC_DEV_SAMPLE_INFO_TYPE_IN, &fs);
-      return;
+  if ((audio_ctrl->recorder_status & 0x08) == 0x00) {
+    i2s_rx_start();
+    audio_ctrl->recorder_status |= 0x08;
+  }
+  if ((audio_ctrl->player_status & 0x08) == 0x00) {
+    i2s_tx_start();
+    audio_ctrl->player_status |= 0x08;
+  }
 
-err_codec_dev:
-      audio_codec_delete_codec_if(audio_ctrl->codec_if);
-      audio_ctrl->codec_if = NULL;
-err_codec_if:
-      audio_codec_delete_gpio_if(audio_ctrl->gpio_if);
-      audio_ctrl->gpio_if = NULL;
-      goto err_gpio_if;
+  ESP_LOGI(TAG, "recoder_start done, status: 0x%x/0x%x",
+           audio_ctrl->codec_status, audio_ctrl->recorder_status);
+  xSemaphoreGiveRecursive(audio_ctrl->recorder_lock);
+}
+
+void recorder_stop() {
+  ESP_LOGI(TAG, "recorder_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
+           audio_ctrl->recorder_status);
+  if ((audio_ctrl->recorder_status & 0x08) == 0x08) {
+    audio_ctrl->recorder_status &= 0xF7;
+    i2s_rx_stop();
+  }
+  if ((audio_ctrl->codec_status & 0x01) == 0x01 &&
+      (audio_ctrl->recorder_status & 0x08) == 0x00 &&
+      (audio_ctrl->player_status & 0x08) == 0x00) {
+    audio_ctrl->codec_status &= 0xFE;
+    i2s_deinit();
+  }
+  ESP_LOGI(TAG, "recoder_stop done, status: 0x%x/0x%x",
+           audio_ctrl->codec_status, audio_ctrl->recorder_status);
+}
+
+size_t recorder_fetch_data(uint8_t *data, size_t data_size) {
+  if ((audio_ctrl->codec_status & 0x01) == 0x01 &&
+      (audio_ctrl->recorder_status & 0x08) == 0x08) {
+    return i2s_rx_read(data, data_size);
+  } else {
+    return 0;
   }
 }
 
-static void player_chip_start() {
-  if (audio_ctrl->codec_dev) {
-      // 配置播放参数
-      esp_codec_dev_sample_info_t fs = {
-          .sample_rate = audio_ctrl->player_sr,
-          .channel = 2,
-          .bits_per_sample = 16,
-      };
-      esp_codec_dev_set_out_channel_gain(audio_ctrl->codec_dev, ESP_CODEC_DEV_CHANNEL_LEFT | ESP_CODEC_DEV_CHANNEL_RIGHT, 0);
-      esp_codec_dev_sample_info_set(audio_ctrl->codec_dev, ESP_CODEC_DEV_SAMPLE_INFO_TYPE_OUT, &fs);
+void recorder_new_pathname(const char *dname, uint8_t *pname) {
+  uint8_t res;
+  uint16_t index = 0;
+  FIL *ftemp;
+  ftemp = (FIL *)malloc(sizeof(FIL)); /* 开辟FIL字节的内存区域 */
+
+  if (ftemp == NULL) {
+    return; /* 内存申请失败 */
+  }
+
+  while (index < 0xFFFF) {
+    sprintf((char *)pname, "%s/REC%05d.pcm", dname, index);
+    res = f_open(ftemp, (const TCHAR *)pname, FA_READ); /* 尝试打开这个文件 */
+
+    if (res == FR_NO_FILE) {
+      break; /* 该文件名不存在=正是我们需要的. */
+    }
+
+    index++;
+  }
+
+  free(ftemp);
+}
+
+/* -- PLAYER --*/
+static int audio_decoder_read_cb(audio_element_handle_t el, char *buf, int len,
+                                 TickType_t wait_time, void *ctx) {
+  ESP_LOGV(TAG,
+           "start audio_decoder_read_cb to get audio data with player status "
+           "0x%x ...",
+           audio_ctrl->player_status);
+  int read_size = 0;
+  // 播放器运行则等待获得数据
+  while (read_size <= 0 && ((audio_ctrl->player_status & 0x80) == 0x80)) {
+    read_size =
+        read_data(&(audio_ctrl->decoder_in_pool), (unsigned char *)buf, len);
+    if (read_size > 0) {
+      break;
+    }
+    vTaskDelay(pdMS_TO_TICKS(50));
+  }
+
+  if (read_size == 0) {
+    ESP_LOGW(TAG, "no decoding data in decoder_in_pool");
+    if ((audio_ctrl->player_status & 0x40) == 0x40) {
+      drain_data(&(audio_ctrl->player_pool));
+    }
+    return AEL_IO_DONE;
+  } else {
+    return read_size;
   }
 }
 
-static int recorder_fetch_data(uint8_t *buffer, int len) {
-    if (audio_ctrl->codec_dev == NULL) {
-        return -1;
+static int audio_player_pcm_write_cb(audio_element_handle_t el, char *buf,
+                                     int len, TickType_t wait_time, void *ctx) {
+  ESP_LOGV(TAG,
+           "start audio_player_pcm_write_cb write pcm data with player status "
+           "0x%x ...",
+           audio_ctrl->player_status);
+  int written_bytes = 0;
+  uint8_t try_count = 3;
+  while (written_bytes == 0 && try_count-- > 0) {
+    written_bytes =
+        write_data(&(audio_ctrl->player_pool), (const unsigned char *)buf, len);
+    if (written_bytes == 0) {
+      vTaskDelay(pdMS_TO_TICKS(50));
     }
-    int ret = esp_codec_dev_read(audio_ctrl->codec_dev, buffer, len);
-    if (ret < 0) {
-        ESP_LOGE(TAG, "Failed to read data from codec device");
-        return -1;
-    }
-    return ret;
-}
-
-static int player_hw_play(uint8_t *buffer, int len) {
-    if (audio_ctrl->codec_dev == NULL) {
-        return -1;
-    }
-    int ret = esp_codec_dev_write(audio_ctrl->codec_dev, buffer, len);
-    if (ret < 0) {
-        ESP_LOGE(TAG, "Failed to write data to codec device");
-        return -1;
-    }
-    return ret;
-}
-
-int recorder_deinit() {
-  if (audio_ctrl->codec_dev != NULL) {
-    esp_codec_dev_close(audio_ctrl->codec_dev);
-    esp_codec_dev_delete(audio_ctrl->codec_dev);
-    audio_ctrl->codec_dev = NULL;
   }
-  audio_ctrl->recorder_status &= 0x7F;
+  return written_bytes;
+}
+
+static int audio_work_pipeline_init(char *format) {
+  /* mp3的缓存因为解码比较快, 可以设置小一点 */
+  uint8_t cache1_multiple = 10;
+  uint8_t cache1_limit_multiple = 0;  // nodelay
+  uint8_t cache2_multiple = 20;
+  buffer_pool_init(
+      &(audio_ctrl->decoder_in_pool), "DECODER_POOL",
+      PLA_TX_BUFSIZE * cache1_multiple, PLA_TX_BUFSIZE * cache1_limit_multiple,
+      PLA_TX_BUFSIZE * cache2_multiple, audio_ctrl->sdcard_decoding_dir,
+      audio_ctrl->sdcard_decoding_base, audio_ctrl->decoder_format, audio_ctrl->enable_using_sdcard_cache);
+  audio_ctrl->player_status |= 0x40;
+
+  /* 播放音频因为播放缓慢, 需要设置大一点 */
+  cache1_multiple = 50;
+  cache1_limit_multiple = 0;  // nodelay
+  cache2_multiple = 40;
+  buffer_pool_init(
+      &(audio_ctrl->player_pool), "PLAYER_POOL",
+      PLA_TX_BUFSIZE * cache1_multiple, PLA_TX_BUFSIZE * cache1_limit_multiple,
+      PLA_TX_BUFSIZE * cache2_multiple, audio_ctrl->sdcard_player_dir,
+      audio_ctrl->sdcard_player_base, "pcm", audio_ctrl->enable_using_sdcard_cache);
+  audio_ctrl->player_status |= 0x20;
+
+  audio_pipeline_cfg_t pipeline_cfg = DEFAULT_AUDIO_PIPELINE_CONFIG();
+  audio_ctrl->audio_work_pipeline = audio_pipeline_init(&pipeline_cfg);
+  mem_assert(audio_ctrl->audio_work_pipeline);
+
+  mp3_decoder_cfg_t mp3_cfg = DEFAULT_MP3_DECODER_CONFIG();
+  audio_ctrl->audio_decoder = mp3_decoder_init(&mp3_cfg);
+  audio_element_set_read_cb(audio_ctrl->audio_decoder, audio_decoder_read_cb,
+                            NULL);
+
+  audio_ctrl->decoder_outbuf = rb_create(8 * 1024, 1);
+  audio_element_set_output_ringbuf(audio_ctrl->audio_decoder,
+                                   audio_ctrl->decoder_outbuf);
+  audio_pipeline_register(audio_ctrl->audio_work_pipeline,
+                          audio_ctrl->audio_decoder, "mp3_decoder");
+
+  rsp_filter_cfg_t rsp_cfg_w = DEFAULT_RESAMPLE_FILTER_CONFIG();
+  rsp_cfg_w.src_rate = audio_ctrl->decoder_sr;
+  rsp_cfg_w.src_ch = 1;
+  rsp_cfg_w.dest_rate = audio_ctrl->player_sr;
+  rsp_cfg_w.dest_ch = 1;
+  rsp_cfg_w.complexity = 5;
+  audio_ctrl->player_filter = rsp_filter_init(&rsp_cfg_w);
+  audio_element_set_write_cb(audio_ctrl->player_filter,
+                             audio_player_pcm_write_cb, NULL);
+  audio_pipeline_register(audio_ctrl->audio_work_pipeline,
+                          audio_ctrl->player_filter, "filter_w");
+
+  const char *link_tag[2] = {"mp3_decoder", "filter_w"};
+  audio_pipeline_link(audio_ctrl->audio_work_pipeline, &link_tag[0], 2);
+
+  return 0;
+}
+
+static int audio_work_pipeline_deinit() {
+  audio_pipeline_terminate(audio_ctrl->audio_work_pipeline);
+  audio_pipeline_unregister(audio_ctrl->audio_work_pipeline,
+                            audio_ctrl->audio_decoder);
+  audio_pipeline_unregister(audio_ctrl->audio_work_pipeline,
+                            audio_ctrl->player_filter);
+
+  audio_pipeline_remove_listener(audio_ctrl->audio_work_pipeline);
+
+  audio_pipeline_deinit(audio_ctrl->audio_work_pipeline);
+  audio_element_deinit(audio_ctrl->player_filter);
+  audio_element_deinit(audio_ctrl->audio_decoder);
+  rb_destroy(audio_ctrl->decoder_outbuf);
+
+  buffer_pool_deinit(&(audio_ctrl->decoder_in_pool));
+  buffer_pool_deinit(&(audio_ctrl->player_pool));
+
+  return 0;
+}
+
+static int audio_work_pipeline_start() {
+  audio_pipeline_run(audio_ctrl->audio_work_pipeline);
+  return 0;
+}
+
+static int audio_work_pipeline_stop() {
+  audio_pipeline_stop(audio_ctrl->audio_work_pipeline);
+  audio_pipeline_wait_for_stop(audio_ctrl->audio_work_pipeline);
+  return 0;
+}
+
+static void player_task(void *arg) {
+  ESP_LOGI(TAG, "player_task begin ...");
+  uint8_t *data = malloc(PLA_TX_BUFSIZE);
+
+  while (audio_ctrl->player_task_working) {
+    /**
+     * audio_ctrl->player_status
+     * [7]: 0.未初始化 1.初始化
+     * [6]: 1.使用解码器缓存
+     * [5]: 1.使用播放缓存
+     *
+     * [3]: 0.未运行 1.运行
+     * [2]: 1.draining
+     * [1]: 1.解码器缓存非空
+     * [0]: 1.播放缓存非空
+     */
+    if ((audio_ctrl->player_status & 0x08) != 0) {
+      int read_bytes =
+          read_data(&(audio_ctrl->player_pool), data, PLA_TX_BUFSIZE);
+      if (read_bytes > 0) {
+        ESP_LOGD(TAG, "%dbytes audio data ready to read from buffer.",
+                 read_bytes);
+        size_t play_bytes = player_hw_play(data, read_bytes);
+        ESP_LOGD(TAG, "%dbytes audio data read from buffer played.",
+                 play_bytes);
+      } else if (read_bytes == 0) {
+        if ((audio_ctrl->player_status & 0x04) == 0x04) {
+          /* is draining */
+          if ((audio_ctrl->player_status & 0x40) == 0x40) {
+            /* using decoder cache */
+            if (buffer_pool_is_empty(&(audio_ctrl->decoder_in_pool)) &&
+                buffer_pool_is_empty(&(audio_ctrl->player_pool))) {
+              vTaskDelay(pdMS_TO_TICKS(120));
+              audio_ctrl->audio_ctrl_callback(AUDIO_CTRL_PLAYER,
+                                              AUDIO_PLAYER_STOPPED);
+            }
+          } else {
+            /* only use player cache */
+            if (buffer_pool_is_empty(&(audio_ctrl->player_pool))) {
+              vTaskDelay(pdMS_TO_TICKS(120));
+              audio_ctrl->audio_ctrl_callback(AUDIO_CTRL_PLAYER,
+                                              AUDIO_PLAYER_STOPPED);
+            }
+          }
+        } else {
+          vTaskDelay(pdMS_TO_TICKS(20));
+        }
+      } else {
+        vTaskDelay(pdMS_TO_TICKS(20));
+      }
+    } else {
+      vTaskDelay(pdMS_TO_TICKS(20));
+    }
+  }  // while
+
+  vTaskDelay(pdMS_TO_TICKS(100));
+
+  free(data);
+  data = NULL;
+
+  ESP_LOGI(TAG, "thread player_task exit ...");
+  vTaskDelete(NULL);
+}
+
+int player_init(audio_ctrl_t *audio) {
+  audio_ctrl = audio;
+  audio_ctrl->player_lock = xSemaphoreCreateRecursiveMutex();
+  xSemaphoreGiveRecursive(audio_ctrl->player_lock);
+
+  if (audio_ctrl->decoder_sr == 0) {
+    audio_ctrl->decoder_sr = DEFAULT_AUDIO_CTRL_SR;
+  }
+  if (audio_ctrl->player_sr == 0) {
+    audio_ctrl->player_sr = DEFAULT_AUDIO_CTRL_SR;
+  }
+
+  /* 创建解码器和播放器缓存, 创建解码任务流 */
+  audio_work_pipeline_init(audio_ctrl->decoder_format);
+
+  /* 创建送数据到播放器的任务 */
+  TaskHandle_t play_task_handler;
+  audio_ctrl->player_task_working = true;
+  xTaskCreate(player_task, "play_task_work", CONFIG_MAIN_TASK_STACK_SIZE,
+              &play_task_handler, 18, NULL);
+
+  audio_ctrl->player_status |= 0x80;
+
+  /* 启动解码任务流 */
+  audio_work_pipeline_start();
+
   return 0;
 }
 
 int player_deinit() {
   /* 停止解码任务流 */
-  audio_pipeline_stop();
+  audio_work_pipeline_stop();
   /* 释放解码任务流, 释放解码器和播放器缓存 */
-  audio_pipeline_deinit();
+  audio_work_pipeline_deinit();
   /* 等待播放器任务结束 */
   audio_ctrl->player_task_working = false;
-
-  if (audio_ctrl->codec_dev != NULL) {
-    esp_codec_dev_close(audio_ctrl->codec_dev);
-    esp_codec_dev_delete(audio_ctrl->codec_dev);
-    audio_ctrl->codec_dev = NULL;
-  }
 
   audio_ctrl->player_status &= 0x7F;
   return 0;
@@ -211,59 +389,70 @@ int player_reset() {
 }
 
 static void player_chip_start() {
-
-// //  return;
-//   /* ES8388初始化配置，有效降低启动时发出沙沙声 */
-//   es8388_adda_cfg(1, 0);       /* 打开DAC，关闭ADC */
-//   es8388_input_cfg(0);         /* 录音关闭 */
-//   es8388_output_cfg(1, 1);     /* 喇叭通道和耳机通道打开 */
-//   es8388_hpvol_set(33);        /* 设置喇叭 */
-//   es8388_spkvol_set(22);       /* 设置耳机 */
-// //  xl9555_pin_write(SPK_EN_IO, 0); /* 打开喇叭 */
-//   vTaskDelay(pdMS_TO_TICKS(20));
+  /* ES8388初始化配置，有效降低启动时发出沙沙声 */
+  es8388_adda_cfg(1, 0);       /* 打开DAC，关闭ADC */
+  es8388_input_cfg(0);         /* 录音关闭 */
+  es8388_output_cfg(1, 1);     /* 喇叭通道和耳机通道打开 */
+  es8388_hpvol_set(33);        /* 设置喇叭 */
+  es8388_spkvol_set(22);       /* 设置耳机 */
+  //xl9555_pin_write(SPK_EN_IO, 0); /* 打开喇叭 */
+  vTaskDelay(pdMS_TO_TICKS(20));
 }
 
 void player_start(int sample_rate) {
-    ESP_LOGI(TAG, "player_start status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
+  ESP_LOGI(TAG, "player_start status: 0x%x/0x%x", audio_ctrl->codec_status,
+           audio_ctrl->player_status);
 
-    if (audio_ctrl->codec_dev == NULL) {
-        recorder_chip_start();  // 初始化编解码器设备
-    }
+  if ((audio_ctrl->codec_status & 0x01) == 0x00) {
+    myi2s_init(audio_ctrl->player_sr); /* 初始化用于录音和播放的i2s */
+    audio_ctrl->codec_status |= 0x01;
+  }
 
-    player_chip_start();
+  player_chip_start();
 
-    if (audio_ctrl->codec_dev != NULL) {
-        esp_codec_dev_open(audio_ctrl->codec_dev, ESP_CODEC_DEV_WORK_MODE_TX);
-        audio_ctrl->player_status |= 0x08;
-    }
+  buffer_pool_reset(&(audio_ctrl->player_pool));
+  buffer_pool_reset(&(audio_ctrl->decoder_in_pool));
 
-    buffer_pool_reset(&(audio_ctrl->player_pool));
-    buffer_pool_reset(&(audio_ctrl->decoder_in_pool));
+  /* set running flag */
+  if ((audio_ctrl->recorder_status & 0x08) == 0x00) {
+    i2s_rx_start();
+    audio_ctrl->recorder_status |= 0x08;
+  }
+  /* set running flag */
+  if ((audio_ctrl->player_status & 0x08) == 0x00) {
+    i2s_tx_start();
+    audio_ctrl->player_status |= 0x08;
+  }
 
-    audio_ctrl->audio_ctrl_callback(AUDIO_CTRL_PLAYER, AUDIO_PLAYER_STARTED);
+  audio_ctrl->audio_ctrl_callback(AUDIO_CTRL_PLAYER, AUDIO_PLAYER_STARTED);
 
-    ESP_LOGI(TAG, "player_start done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->player_status);
+  ESP_LOGI(TAG, "player_start done, status: 0x%x/0x%x",
+           audio_ctrl->codec_status, audio_ctrl->player_status);
 }
 
 void player_stop() {
-    ESP_LOGI(TAG, "player_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
+  ESP_LOGI(TAG, "player_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
+           audio_ctrl->player_status);
 
-    /* clear draining flag */
-    audio_ctrl->player_status &= 0xFB;
+  /* clear draining flag */
+  audio_ctrl->player_status &= 0xFB;
 
-    if ((audio_ctrl->player_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->player_status &= 0xF7;
-    }
-
-    buffer_pool_reset(&(audio_ctrl->decoder_in_pool));
-    buffer_pool_reset(&(audio_ctrl->player_pool));
-
-    ESP_LOGI(TAG, "player_stop done, status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
+  /* clear running flag */
+  if ((audio_ctrl->player_status & 0x08) == 0x08) {
+    audio_ctrl->player_status &= 0xF7;
+    i2s_tx_stop();
+  }
+  /* clear codec init flag */
+  if ((audio_ctrl->codec_status & 0x01) == 0x01 &&
+      (audio_ctrl->recorder_status & 0x08) == 0x00 &&
+      (audio_ctrl->player_status & 0x08) == 0x00) {
+    audio_ctrl->codec_status &= 0xFE;
+    i2s_deinit();
+  }
+  buffer_pool_reset(&(audio_ctrl->decoder_in_pool));
+  buffer_pool_reset(&(audio_ctrl->player_pool));
+  ESP_LOGI(TAG, "player_stop done, status: 0x%x/0x%x", audio_ctrl->codec_status,
+           audio_ctrl->player_status);
 }
 
 void player_drain() {
@@ -297,166 +486,6 @@ size_t player_insert_data(uint8_t *data, size_t data_size) {
     written_data = 0;
   }
   return written_data;
-}
-
-void recorder_start() {
-    xSemaphoreTakeRecursive(audio_ctrl->recorder_lock, portMAX_DELAY);
-    ESP_LOGI(TAG, "recoder_start status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    recorder_chip_start();
-
-    if (audio_ctrl->codec_dev != NULL) {
-        esp_codec_dev_open(audio_ctrl->codec_dev, ESP_CODEC_DEV_WORK_MODE_RX);
-        audio_ctrl->recorder_status |= 0x08;
-    }
-
-    ESP_LOGI(TAG, "recoder_start done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-    xSemaphoreGiveRecursive(audio_ctrl->recorder_lock);
-}
-
-void recorder_stop() {
-    ESP_LOGI(TAG, "recorder_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    if ((audio_ctrl->recorder_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->recorder_status &= 0xF7;
-    }
-
-    ESP_LOGI(TAG, "recoder_stop done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-}
-
-size_t player_hw_play(uint8_t *data, size_t data_size) {
-  ESP_LOGV(TAG, "player_hw_play status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    return esp_codec_dev_write(audio_ctrl->codec_dev, data, data_size);
-  } else {
-    return 0;
-  }
-}
-
-int player_init(audio_ctrl_t *audio) {
-    audio_ctrl = audio;
-    audio_ctrl->player_lock = xSemaphoreCreateRecursiveMutex();
-    xSemaphoreGiveRecursive(audio_ctrl->player_lock);
-
-    if (audio_ctrl->decoder_sr == 0) {
-        audio_ctrl->decoder_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-    if (audio_ctrl->player_sr == 0) {
-        audio_ctrl->player_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-
-    /* 创建解码器和播放器缓存, 创建解码任务流 */
-    audio_pipeline_init(audio_ctrl->decoder_format);
-
-    /* 创建送数据到播放器的任务 */
-    TaskHandle_t play_task_handler;
-    audio_ctrl->player_task_working = true;
-    xTaskCreate(player_task, "play_task_work", CONFIG_MAIN_TASK_STACK_SIZE,
-                &play_task_handler, 18, NULL);
-
-    audio_ctrl->player_status |= 0x80;
-
-    /* 启动解码任务流 */
-    audio_work_pipeline_start();
-
-    return 0;
-}
-
-err_gpio_if:
-      audio_codec_delete_ctrl_if(audio_ctrl->ctrl_if);
-      audio_ctrl->ctrl_if = NULL;
-err_ctrl_if:
-      audio_codec_delete_data_if(audio_ctrl->data_if);
-      audio_ctrl->data_if = NULL;
-      return;
-}
-
-void player_stop() {
-    ESP_LOGI(TAG, "player_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-
-    /* clear draining flag */
-    audio_ctrl->player_status &= 0xFB;
-
-    if ((audio_ctrl->player_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->player_status &= 0xF7;
-    }
-
-    buffer_pool_reset(&(audio_ctrl->decoder_in_pool));
-    buffer_pool_reset(&(audio_ctrl->player_pool));
-
-    ESP_LOGI(TAG, "player_stop done, status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-}
-
-void player_drain() {
-  ESP_LOGI(TAG, "player_drain status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  audio_ctrl->player_status |= 0x04;
-  if ((audio_ctrl->player_status & 0x40) == 0x40) {
-    drain_data(&(audio_ctrl->decoder_in_pool));
-  } else {
-    drain_data(&(audio_ctrl->player_pool));
-  }
-}
-
-size_t player_insert_data(uint8_t *data, size_t data_size) {
-  // ESP_LOGV(TAG, "player_insert_data status: 0x%x/0x%x, data_size:%d",
-  //          audio_ctrl->codec_status, audio_ctrl->player_status, data_size);
-  int written_data = 0;
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    if ((audio_ctrl->player_status & 0x40) == 0x40) {
-      written_data = write_data(&(audio_ctrl->decoder_in_pool),
-                                (const unsigned char *)data, data_size);
-    } else {
-      if ((audio_ctrl->player_status & 0x20) == 0x20) {
-        written_data = write_data(&(audio_ctrl->player_pool),
-                                  (const unsigned char *)data, data_size);
-      }
-    }
-  }
-  if (written_data < 0) {
-    ESP_LOGE(TAG, "Write data into pool failed:%d", written_data);
-    written_data = 0;
-  }
-  return written_data;
-}
-
-void recorder_start() {
-    xSemaphoreTakeRecursive(audio_ctrl->recorder_lock, portMAX_DELAY);
-    ESP_LOGI(TAG, "recoder_start status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    recorder_chip_start();
-
-    if (audio_ctrl->codec_dev != NULL) {
-        esp_codec_dev_open(audio_ctrl->codec_dev, ESP_CODEC_DEV_WORK_MODE_RX);
-        audio_ctrl->recorder_status |= 0x08;
-    }
-
-    ESP_LOGI(TAG, "recoder_start done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-    xSemaphoreGiveRecursive(audio_ctrl->recorder_lock);
-}
-
-void recorder_stop() {
-    ESP_LOGI(TAG, "recorder_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    if ((audio_ctrl->recorder_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->recorder_status &= 0xF7;
-    }
-
-    ESP_LOGI(TAG, "recoder_stop done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
 }
 
 size_t player_hw_play(uint8_t *data, size_t data_size) {
@@ -468,1143 +497,3 @@ size_t player_hw_play(uint8_t *data, size_t data_size) {
     return 0;
   }
 }
-
-int player_init(audio_ctrl_t *audio) {
-    audio_ctrl = audio;
-    audio_ctrl->player_lock = xSemaphoreCreateRecursiveMutex();
-    xSemaphoreGiveRecursive(audio_ctrl->player_lock);
-
-    if (audio_ctrl->decoder_sr == 0) {
-        audio_ctrl->decoder_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-    if (audio_ctrl->player_sr == 0) {
-        audio_ctrl->player_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-
-    /* 创建解码器和播放器缓存, 创建解码任务流 */
-    audio_pipeline_init(audio_ctrl->decoder_format);
-
-    /* 创建送数据到播放器的任务 */
-    TaskHandle_t play_task_handler;
-    audio_ctrl->player_task_working = true;
-    xTaskCreate(player_task, "play_task_work", CONFIG_MAIN_TASK_STACK_SIZE,
-                &play_task_handler, 18, NULL);
-
-    audio_ctrl->player_status |= 0x80;
-
-    /* 启动解码任务流 */
-    audio_work_pipeline_start();
-
-    return 0;
-}
-
-err_gpio_if:
-      audio_codec_delete_ctrl_if(audio_ctrl->ctrl_if);
-      audio_ctrl->ctrl_if = NULL;
-err_ctrl_if:
-      audio_codec_delete_data_if(audio_ctrl->data_if);
-      audio_ctrl->data_if = NULL;
-      return;
-}
-
-void player_stop() {
-    ESP_LOGI(TAG, "player_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-
-    /* clear draining flag */
-    audio_ctrl->player_status &= 0xFB;
-
-    if ((audio_ctrl->player_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->player_status &= 0xF7;
-    }
-
-    buffer_pool_reset(&(audio_ctrl->decoder_in_pool));
-    buffer_pool_reset(&(audio_ctrl->player_pool));
-
-    ESP_LOGI(TAG, "player_stop done, status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-}
-
-void player_drain() {
-  ESP_LOGI(TAG, "player_drain status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  audio_ctrl->player_status |= 0x04;
-  if ((audio_ctrl->player_status & 0x40) == 0x40) {
-    drain_data(&(audio_ctrl->decoder_in_pool));
-  } else {
-    drain_data(&(audio_ctrl->player_pool));
-  }
-}
-
-size_t player_insert_data(uint8_t *data, size_t data_size) {
-  // ESP_LOGV(TAG, "player_insert_data status: 0x%x/0x%x, data_size:%d",
-  //          audio_ctrl->codec_status, audio_ctrl->player_status, data_size);
-  int written_data = 0;
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    if ((audio_ctrl->player_status & 0x40) == 0x40) {
-      written_data = write_data(&(audio_ctrl->decoder_in_pool),
-                                (const unsigned char *)data, data_size);
-    } else {
-      if ((audio_ctrl->player_status & 0x20) == 0x20) {
-        written_data = write_data(&(audio_ctrl->player_pool),
-                                  (const unsigned char *)data, data_size);
-      }
-    }
-  }
-  if (written_data < 0) {
-    ESP_LOGE(TAG, "Write data into pool failed:%d", written_data);
-    written_data = 0;
-  }
-  return written_data;
-}
-
-void recorder_start() {
-    xSemaphoreTakeRecursive(audio_ctrl->recorder_lock, portMAX_DELAY);
-    ESP_LOGI(TAG, "recoder_start status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    recorder_chip_start();
-
-    if (audio_ctrl->codec_dev != NULL) {
-        esp_codec_dev_open(audio_ctrl->codec_dev, ESP_CODEC_DEV_WORK_MODE_RX);
-        audio_ctrl->recorder_status |= 0x08;
-    }
-
-    ESP_LOGI(TAG, "recoder_start done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-    xSemaphoreGiveRecursive(audio_ctrl->recorder_lock);
-}
-
-void recorder_stop() {
-    ESP_LOGI(TAG, "recorder_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    if ((audio_ctrl->recorder_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->recorder_status &= 0xF7;
-    }
-
-    ESP_LOGI(TAG, "recoder_stop done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-}
-
-size_t player_hw_play(uint8_t *data, size_t data_size) {
-  ESP_LOGV(TAG, "player_hw_play status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    return i2s_tx_write(data, data_size);
-  } else {
-    return 0;
-  }
-}
-
-int player_init(audio_ctrl_t *audio) {
-    audio_ctrl = audio;
-    audio_ctrl->player_lock = xSemaphoreCreateRecursiveMutex();
-    xSemaphoreGiveRecursive(audio_ctrl->player_lock);
-
-    if (audio_ctrl->decoder_sr == 0) {
-        audio_ctrl->decoder_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-    if (audio_ctrl->player_sr == 0) {
-        audio_ctrl->player_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-
-    /* 创建解码器和播放器缓存, 创建解码任务流 */
-    audio_pipeline_init(audio_ctrl->decoder_format);
-
-    /* 创建送数据到播放器的任务 */
-    TaskHandle_t play_task_handler;
-    audio_ctrl->player_task_working = true;
-    xTaskCreate(player_task, "play_task_work", CONFIG_MAIN_TASK_STACK_SIZE,
-                &play_task_handler, 18, NULL);
-
-    audio_ctrl->player_status |= 0x80;
-
-    /* 启动解码任务流 */
-    audio_work_pipeline_start();
-
-    return 0;
-}
-
-err_gpio_if:
-      audio_codec_delete_ctrl_if(audio_ctrl->ctrl_if);
-      audio_ctrl->ctrl_if = NULL;
-err_ctrl_if:
-      audio_codec_delete_data_if(audio_ctrl->data_if);
-      audio_ctrl->data_if = NULL;
-      return;
-}
-
-void player_stop() {
-    ESP_LOGI(TAG, "player_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-
-    /* clear draining flag */
-    audio_ctrl->player_status &= 0xFB;
-
-    if ((audio_ctrl->player_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->player_status &= 0xF7;
-    }
-
-    buffer_pool_reset(&(audio_ctrl->decoder_in_pool));
-    buffer_pool_reset(&(audio_ctrl->player_pool));
-
-    ESP_LOGI(TAG, "player_stop done, status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-}
-
-void player_drain() {
-  ESP_LOGI(TAG, "player_drain status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  audio_ctrl->player_status |= 0x04;
-  if ((audio_ctrl->player_status & 0x40) == 0x40) {
-    drain_data(&(audio_ctrl->decoder_in_pool));
-  } else {
-    drain_data(&(audio_ctrl->player_pool));
-  }
-}
-
-size_t player_insert_data(uint8_t *data, size_t data_size) {
-  // ESP_LOGV(TAG, "player_insert_data status: 0x%x/0x%x, data_size:%d",
-  //          audio_ctrl->codec_status, audio_ctrl->player_status, data_size);
-  int written_data = 0;
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    if ((audio_ctrl->player_status & 0x40) == 0x40) {
-      written_data = write_data(&(audio_ctrl->decoder_in_pool),
-                                (const unsigned char *)data, data_size);
-    } else {
-      if ((audio_ctrl->player_status & 0x20) == 0x20) {
-        written_data = write_data(&(audio_ctrl->player_pool),
-                                  (const unsigned char *)data, data_size);
-      }
-    }
-  }
-  if (written_data < 0) {
-    ESP_LOGE(TAG, "Write data into pool failed:%d", written_data);
-    written_data = 0;
-  }
-  return written_data;
-}
-
-void recorder_start() {
-    xSemaphoreTakeRecursive(audio_ctrl->recorder_lock, portMAX_DELAY);
-    ESP_LOGI(TAG, "recoder_start status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    recorder_chip_start();
-
-    if (audio_ctrl->codec_dev != NULL) {
-        esp_codec_dev_open(audio_ctrl->codec_dev, ESP_CODEC_DEV_WORK_MODE_RX);
-        audio_ctrl->recorder_status |= 0x08;
-    }
-
-    ESP_LOGI(TAG, "recoder_start done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-    xSemaphoreGiveRecursive(audio_ctrl->recorder_lock);
-}
-
-void recorder_stop() {
-    ESP_LOGI(TAG, "recorder_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    if ((audio_ctrl->recorder_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->recorder_status &= 0xF7;
-    }
-
-    ESP_LOGI(TAG, "recoder_stop done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-}
-
-size_t player_hw_play(uint8_t *data, size_t data_size) {
-  ESP_LOGV(TAG, "player_hw_play status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    return i2s_tx_write(data, data_size);
-  } else {
-    return 0;
-  }
-}
-
-int player_init(audio_ctrl_t *audio) {
-    audio_ctrl = audio;
-    audio_ctrl->player_lock = xSemaphoreCreateRecursiveMutex();
-    xSemaphoreGiveRecursive(audio_ctrl->player_lock);
-
-    if (audio_ctrl->decoder_sr == 0) {
-        audio_ctrl->decoder_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-    if (audio_ctrl->player_sr == 0) {
-        audio_ctrl->player_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-
-    /* 创建解码器和播放器缓存, 创建解码任务流 */
-    audio_pipeline_init(audio_ctrl->decoder_format);
-
-    /* 创建送数据到播放器的任务 */
-    TaskHandle_t play_task_handler;
-    audio_ctrl->player_task_working = true;
-    xTaskCreate(player_task, "play_task_work", CONFIG_MAIN_TASK_STACK_SIZE,
-                &play_task_handler, 18, NULL);
-
-    audio_ctrl->player_status |= 0x80;
-
-    /* 启动解码任务流 */
-    audio_work_pipeline_start();
-
-    return 0;
-}
-
-err_gpio_if:
-      audio_codec_delete_ctrl_if(audio_ctrl->ctrl_if);
-      audio_ctrl->ctrl_if = NULL;
-err_ctrl_if:
-      audio_codec_delete_data_if(audio_ctrl->data_if);
-      audio_ctrl->data_if = NULL;
-      return;
-}
-
-void player_stop() {
-    ESP_LOGI(TAG, "player_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-
-    /* clear draining flag */
-    audio_ctrl->player_status &= 0xFB;
-
-    if ((audio_ctrl->player_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->player_status &= 0xF7;
-    }
-
-    buffer_pool_reset(&(audio_ctrl->decoder_in_pool));
-    buffer_pool_reset(&(audio_ctrl->player_pool));
-
-    ESP_LOGI(TAG, "player_stop done, status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-}
-
-void player_drain() {
-  ESP_LOGI(TAG, "player_drain status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  audio_ctrl->player_status |= 0x04;
-  if ((audio_ctrl->player_status & 0x40) == 0x40) {
-    drain_data(&(audio_ctrl->decoder_in_pool));
-  } else {
-    drain_data(&(audio_ctrl->player_pool));
-  }
-}
-
-size_t player_insert_data(uint8_t *data, size_t data_size) {
-  // ESP_LOGV(TAG, "player_insert_data status: 0x%x/0x%x, data_size:%d",
-  //          audio_ctrl->codec_status, audio_ctrl->player_status, data_size);
-  int written_data = 0;
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    if ((audio_ctrl->player_status & 0x40) == 0x40) {
-      written_data = write_data(&(audio_ctrl->decoder_in_pool),
-                                (const unsigned char *)data, data_size);
-    } else {
-      if ((audio_ctrl->player_status & 0x20) == 0x20) {
-        written_data = write_data(&(audio_ctrl->player_pool),
-                                  (const unsigned char *)data, data_size);
-      }
-    }
-  }
-  if (written_data < 0) {
-    ESP_LOGE(TAG, "Write data into pool failed:%d", written_data);
-    written_data = 0;
-  }
-  return written_data;
-}
-
-void recorder_start() {
-    xSemaphoreTakeRecursive(audio_ctrl->recorder_lock, portMAX_DELAY);
-    ESP_LOGI(TAG, "recoder_start status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    recorder_chip_start();
-
-    if (audio_ctrl->codec_dev != NULL) {
-        esp_codec_dev_open(audio_ctrl->codec_dev, ESP_CODEC_DEV_WORK_MODE_RX);
-        audio_ctrl->recorder_status |= 0x08;
-    }
-
-    ESP_LOGI(TAG, "recoder_start done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-    xSemaphoreGiveRecursive(audio_ctrl->recorder_lock);
-}
-
-void recorder_stop() {
-    ESP_LOGI(TAG, "recorder_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    if ((audio_ctrl->recorder_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->recorder_status &= 0xF7;
-    }
-
-    ESP_LOGI(TAG, "recoder_stop done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-}
-
-size_t player_hw_play(uint8_t *data, size_t data_size) {
-  ESP_LOGV(TAG, "player_hw_play status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    return i2s_tx_write(data, data_size);
-  } else {
-    return 0;
-  }
-}
-
-int player_init(audio_ctrl_t *audio) {
-    audio_ctrl = audio;
-    audio_ctrl->player_lock = xSemaphoreCreateRecursiveMutex();
-    xSemaphoreGiveRecursive(audio_ctrl->player_lock);
-
-    if (audio_ctrl->decoder_sr == 0) {
-        audio_ctrl->decoder_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-    if (audio_ctrl->player_sr == 0) {
-        audio_ctrl->player_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-
-    /* 创建解码器和播放器缓存, 创建解码任务流 */
-    audio_pipeline_init(audio_ctrl->decoder_format);
-
-    /* 创建送数据到播放器的任务 */
-    TaskHandle_t play_task_handler;
-    audio_ctrl->player_task_working = true;
-    xTaskCreate(player_task, "play_task_work", CONFIG_MAIN_TASK_STACK_SIZE,
-                &play_task_handler, 18, NULL);
-
-    audio_ctrl->player_status |= 0x80;
-
-    /* 启动解码任务流 */
-    audio_work_pipeline_start();
-
-    return 0;
-}
-
-err_gpio_if:
-      audio_codec_delete_ctrl_if(audio_ctrl->ctrl_if);
-      audio_ctrl->ctrl_if = NULL;
-err_ctrl_if:
-      audio_codec_delete_data_if(audio_ctrl->data_if);
-      audio_ctrl->data_if = NULL;
-      return;
-}
-
-void player_stop() {
-    ESP_LOGI(TAG, "player_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-
-    /* clear draining flag */
-    audio_ctrl->player_status &= 0xFB;
-
-    if ((audio_ctrl->player_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->player_status &= 0xF7;
-    }
-
-    buffer_pool_reset(&(audio_ctrl->decoder_in_pool));
-    buffer_pool_reset(&(audio_ctrl->player_pool));
-
-    ESP_LOGI(TAG, "player_stop done, status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-}
-
-void player_drain() {
-  ESP_LOGI(TAG, "player_drain status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  audio_ctrl->player_status |= 0x04;
-  if ((audio_ctrl->player_status & 0x40) == 0x40) {
-    drain_data(&(audio_ctrl->decoder_in_pool));
-  } else {
-    drain_data(&(audio_ctrl->player_pool));
-  }
-}
-
-size_t player_insert_data(uint8_t *data, size_t data_size) {
-  // ESP_LOGV(TAG, "player_insert_data status: 0x%x/0x%x, data_size:%d",
-  //          audio_ctrl->codec_status, audio_ctrl->player_status, data_size);
-  int written_data = 0;
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    if ((audio_ctrl->player_status & 0x40) == 0x40) {
-      written_data = write_data(&(audio_ctrl->decoder_in_pool),
-                                (const unsigned char *)data, data_size);
-    } else {
-      if ((audio_ctrl->player_status & 0x20) == 0x20) {
-        written_data = write_data(&(audio_ctrl->player_pool),
-                                  (const unsigned char *)data, data_size);
-      }
-    }
-  }
-  if (written_data < 0) {
-    ESP_LOGE(TAG, "Write data into pool failed:%d", written_data);
-    written_data = 0;
-  }
-  return written_data;
-}
-
-void recorder_start() {
-    xSemaphoreTakeRecursive(audio_ctrl->recorder_lock, portMAX_DELAY);
-    ESP_LOGI(TAG, "recoder_start status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    recorder_chip_start();
-
-    if (audio_ctrl->codec_dev != NULL) {
-        esp_codec_dev_open(audio_ctrl->codec_dev, ESP_CODEC_DEV_WORK_MODE_RX);
-        audio_ctrl->recorder_status |= 0x08;
-    }
-
-    ESP_LOGI(TAG, "recoder_start done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-    xSemaphoreGiveRecursive(audio_ctrl->recorder_lock);
-}
-
-void recorder_stop() {
-    ESP_LOGI(TAG, "recorder_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    if ((audio_ctrl->recorder_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->recorder_status &= 0xF7;
-    }
-
-    ESP_LOGI(TAG, "recoder_stop done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-}
-
-size_t player_hw_play(uint8_t *data, size_t data_size) {
-  ESP_LOGV(TAG, "player_hw_play status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    return i2s_tx_write(data, data_size);
-  } else {
-    return 0;
-  }
-}
-
-int player_init(audio_ctrl_t *audio) {
-    audio_ctrl = audio;
-    audio_ctrl->player_lock = xSemaphoreCreateRecursiveMutex();
-    xSemaphoreGiveRecursive(audio_ctrl->player_lock);
-
-    if (audio_ctrl->decoder_sr == 0) {
-        audio_ctrl->decoder_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-    if (audio_ctrl->player_sr == 0) {
-        audio_ctrl->player_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-
-    /* 创建解码器和播放器缓存, 创建解码任务流 */
-    audio_pipeline_init(audio_ctrl->decoder_format);
-
-    /* 创建送数据到播放器的任务 */
-    TaskHandle_t play_task_handler;
-    audio_ctrl->player_task_working = true;
-    xTaskCreate(player_task, "play_task_work", CONFIG_MAIN_TASK_STACK_SIZE,
-                &play_task_handler, 18, NULL);
-
-    audio_ctrl->player_status |= 0x80;
-
-    /* 启动解码任务流 */
-    audio_work_pipeline_start();
-
-    return 0;
-}
-
-err_gpio_if:
-      audio_codec_delete_ctrl_if(audio_ctrl->ctrl_if);
-      audio_ctrl->ctrl_if = NULL;
-err_ctrl_if:
-      audio_codec_delete_data_if(audio_ctrl->data_if);
-      audio_ctrl->data_if = NULL;
-      return;
-}
-
-void player_stop() {
-    ESP_LOGI(TAG, "player_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-
-    /* clear draining flag */
-    audio_ctrl->player_status &= 0xFB;
-
-    if ((audio_ctrl->player_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->player_status &= 0xF7;
-    }
-
-    buffer_pool_reset(&(audio_ctrl->decoder_in_pool));
-    buffer_pool_reset(&(audio_ctrl->player_pool));
-
-    ESP_LOGI(TAG, "player_stop done, status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-}
-
-void player_drain() {
-  ESP_LOGI(TAG, "player_drain status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  audio_ctrl->player_status |= 0x04;
-  if ((audio_ctrl->player_status & 0x40) == 0x40) {
-    drain_data(&(audio_ctrl->decoder_in_pool));
-  } else {
-    drain_data(&(audio_ctrl->player_pool));
-  }
-}
-
-size_t player_insert_data(uint8_t *data, size_t data_size) {
-  // ESP_LOGV(TAG, "player_insert_data status: 0x%x/0x%x, data_size:%d",
-  //          audio_ctrl->codec_status, audio_ctrl->player_status, data_size);
-  int written_data = 0;
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    if ((audio_ctrl->player_status & 0x40) == 0x40) {
-      written_data = write_data(&(audio_ctrl->decoder_in_pool),
-                                (const unsigned char *)data, data_size);
-    } else {
-      if ((audio_ctrl->player_status & 0x20) == 0x20) {
-        written_data = write_data(&(audio_ctrl->player_pool),
-                                  (const unsigned char *)data, data_size);
-      }
-    }
-  }
-  if (written_data < 0) {
-    ESP_LOGE(TAG, "Write data into pool failed:%d", written_data);
-    written_data = 0;
-  }
-  return written_data;
-}
-
-void recorder_start() {
-    xSemaphoreTakeRecursive(audio_ctrl->recorder_lock, portMAX_DELAY);
-    ESP_LOGI(TAG, "recoder_start status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    recorder_chip_start();
-
-    if (audio_ctrl->codec_dev != NULL) {
-        esp_codec_dev_open(audio_ctrl->codec_dev, ESP_CODEC_DEV_WORK_MODE_RX);
-        audio_ctrl->recorder_status |= 0x08;
-    }
-
-    ESP_LOGI(TAG, "recoder_start done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-    xSemaphoreGiveRecursive(audio_ctrl->recorder_lock);
-}
-
-void recorder_stop() {
-    ESP_LOGI(TAG, "recorder_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    if ((audio_ctrl->recorder_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->recorder_status &= 0xF7;
-    }
-
-    ESP_LOGI(TAG, "recoder_stop done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-}
-
-size_t player_hw_play(uint8_t *data, size_t data_size) {
-  ESP_LOGV(TAG, "player_hw_play status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    return i2s_tx_write(data, data_size);
-  } else {
-    return 0;
-  }
-}
-
-int player_init(audio_ctrl_t *audio) {
-    audio_ctrl = audio;
-    audio_ctrl->player_lock = xSemaphoreCreateRecursiveMutex();
-    xSemaphoreGiveRecursive(audio_ctrl->player_lock);
-
-    if (audio_ctrl->decoder_sr == 0) {
-        audio_ctrl->decoder_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-    if (audio_ctrl->player_sr == 0) {
-        audio_ctrl->player_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-
-    /* 创建解码器和播放器缓存, 创建解码任务流 */
-    audio_pipeline_init(audio_ctrl->decoder_format);
-
-    /* 创建送数据到播放器的任务 */
-    TaskHandle_t play_task_handler;
-    audio_ctrl->player_task_working = true;
-    xTaskCreate(player_task, "play_task_work", CONFIG_MAIN_TASK_STACK_SIZE,
-                &play_task_handler, 18, NULL);
-
-    audio_ctrl->player_status |= 0x80;
-
-    /* 启动解码任务流 */
-    audio_work_pipeline_start();
-
-    return 0;
-}
-
-err_gpio_if:
-      audio_codec_delete_ctrl_if(audio_ctrl->ctrl_if);
-      audio_ctrl->ctrl_if = NULL;
-err_ctrl_if:
-      audio_codec_delete_data_if(audio_ctrl->data_if);
-      audio_ctrl->data_if = NULL;
-      return;
-}
-
-void player_stop() {
-    ESP_LOGI(TAG, "player_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-
-    /* clear draining flag */
-    audio_ctrl->player_status &= 0xFB;
-
-    if ((audio_ctrl->player_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->player_status &= 0xF7;
-    }
-
-    buffer_pool_reset(&(audio_ctrl->decoder_in_pool));
-    buffer_pool_reset(&(audio_ctrl->player_pool));
-
-    ESP_LOGI(TAG, "player_stop done, status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-}
-
-void player_drain() {
-  ESP_LOGI(TAG, "player_drain status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  audio_ctrl->player_status |= 0x04;
-  if ((audio_ctrl->player_status & 0x40) == 0x40) {
-    drain_data(&(audio_ctrl->decoder_in_pool));
-  } else {
-    drain_data(&(audio_ctrl->player_pool));
-  }
-}
-
-size_t player_insert_data(uint8_t *data, size_t data_size) {
-  // ESP_LOGV(TAG, "player_insert_data status: 0x%x/0x%x, data_size:%d",
-  //          audio_ctrl->codec_status, audio_ctrl->player_status, data_size);
-  int written_data = 0;
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    if ((audio_ctrl->player_status & 0x40) == 0x40) {
-      written_data = write_data(&(audio_ctrl->decoder_in_pool),
-                                (const unsigned char *)data, data_size);
-    } else {
-      if ((audio_ctrl->player_status & 0x20) == 0x20) {
-        written_data = write_data(&(audio_ctrl->player_pool),
-                                  (const unsigned char *)data, data_size);
-      }
-    }
-  }
-  if (written_data < 0) {
-    ESP_LOGE(TAG, "Write data into pool failed:%d", written_data);
-    written_data = 0;
-  }
-  return written_data;
-}
-
-void recorder_start() {
-    xSemaphoreTakeRecursive(audio_ctrl->recorder_lock, portMAX_DELAY);
-    ESP_LOGI(TAG, "recoder_start status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    recorder_chip_start();
-
-    if (audio_ctrl->codec_dev != NULL) {
-        esp_codec_dev_open(audio_ctrl->codec_dev, ESP_CODEC_DEV_WORK_MODE_RX);
-        audio_ctrl->recorder_status |= 0x08;
-    }
-
-    ESP_LOGI(TAG, "recoder_start done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-    xSemaphoreGiveRecursive(audio_ctrl->recorder_lock);
-}
-
-void recorder_stop() {
-    ESP_LOGI(TAG, "recorder_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    if ((audio_ctrl->recorder_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->recorder_status &= 0xF7;
-    }
-
-    ESP_LOGI(TAG, "recoder_stop done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-}
-
-size_t player_hw_play(uint8_t *data, size_t data_size) {
-  ESP_LOGV(TAG, "player_hw_play status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    return i2s_tx_write(data, data_size);
-  } else {
-    return 0;
-  }
-}
-
-int player_init(audio_ctrl_t *audio) {
-    audio_ctrl = audio;
-    audio_ctrl->player_lock = xSemaphoreCreateRecursiveMutex();
-    xSemaphoreGiveRecursive(audio_ctrl->player_lock);
-
-    if (audio_ctrl->decoder_sr == 0) {
-        audio_ctrl->decoder_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-    if (audio_ctrl->player_sr == 0) {
-        audio_ctrl->player_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-
-    /* 创建解码器和播放器缓存, 创建解码任务流 */
-    audio_pipeline_init(audio_ctrl->decoder_format);
-
-    /* 创建送数据到播放器的任务 */
-    TaskHandle_t play_task_handler;
-    audio_ctrl->player_task_working = true;
-    xTaskCreate(player_task, "play_task_work", CONFIG_MAIN_TASK_STACK_SIZE,
-                &play_task_handler, 18, NULL);
-
-    audio_ctrl->player_status |= 0x80;
-
-    /* 启动解码任务流 */
-    audio_work_pipeline_start();
-
-    return 0;
-}
-
-err_gpio_if:
-      audio_codec_delete_ctrl_if(audio_ctrl->ctrl_if);
-      audio_ctrl->ctrl_if = NULL;
-err_ctrl_if:
-      audio_codec_delete_data_if(audio_ctrl->data_if);
-      audio_ctrl->data_if = NULL;
-      return;
-}
-
-void player_stop() {
-    ESP_LOGI(TAG, "player_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-
-    /* clear draining flag */
-    audio_ctrl->player_status &= 0xFB;
-
-    if ((audio_ctrl->player_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->player_status &= 0xF7;
-    }
-
-    buffer_pool_reset(&(audio_ctrl->decoder_in_pool));
-    buffer_pool_reset(&(audio_ctrl->player_pool));
-
-    ESP_LOGI(TAG, "player_stop done, status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-}
-
-void player_drain() {
-  ESP_LOGI(TAG, "player_drain status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  audio_ctrl->player_status |= 0x04;
-  if ((audio_ctrl->player_status & 0x40) == 0x40) {
-    drain_data(&(audio_ctrl->decoder_in_pool));
-  } else {
-    drain_data(&(audio_ctrl->player_pool));
-  }
-}
-
-size_t player_insert_data(uint8_t *data, size_t data_size) {
-  // ESP_LOGV(TAG, "player_insert_data status: 0x%x/0x%x, data_size:%d",
-  //          audio_ctrl->codec_status, audio_ctrl->player_status, data_size);
-  int written_data = 0;
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    if ((audio_ctrl->player_status & 0x40) == 0x40) {
-      written_data = write_data(&(audio_ctrl->decoder_in_pool),
-                                (const unsigned char *)data, data_size);
-    } else {
-      if ((audio_ctrl->player_status & 0x20) == 0x20) {
-        written_data = write_data(&(audio_ctrl->player_pool),
-                                  (const unsigned char *)data, data_size);
-      }
-    }
-  }
-  if (written_data < 0) {
-    ESP_LOGE(TAG, "Write data into pool failed:%d", written_data);
-    written_data = 0;
-  }
-  return written_data;
-}
-
-void recorder_start() {
-    xSemaphoreTakeRecursive(audio_ctrl->recorder_lock, portMAX_DELAY);
-    ESP_LOGI(TAG, "recoder_start status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    recorder_chip_start();
-
-    if (audio_ctrl->codec_dev != NULL) {
-        esp_codec_dev_open(audio_ctrl->codec_dev, ESP_CODEC_DEV_WORK_MODE_RX);
-        audio_ctrl->recorder_status |= 0x08;
-    }
-
-    ESP_LOGI(TAG, "recoder_start done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-    xSemaphoreGiveRecursive(audio_ctrl->recorder_lock);
-}
-
-void recorder_stop() {
-    ESP_LOGI(TAG, "recorder_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    if ((audio_ctrl->recorder_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->recorder_status &= 0xF7;
-    }
-
-    ESP_LOGI(TAG, "recoder_stop done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-}
-
-size_t player_hw_play(uint8_t *data, size_t data_size) {
-  ESP_LOGV(TAG, "player_hw_play status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    return i2s_tx_write(data, data_size);
-  } else {
-    return 0;
-  }
-}
-
-int player_init(audio_ctrl_t *audio) {
-    audio_ctrl = audio;
-    audio_ctrl->player_lock = xSemaphoreCreateRecursiveMutex();
-    xSemaphoreGiveRecursive(audio_ctrl->player_lock);
-
-    if (audio_ctrl->decoder_sr == 0) {
-        audio_ctrl->decoder_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-    if (audio_ctrl->player_sr == 0) {
-        audio_ctrl->player_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-
-    /* 创建解码器和播放器缓存, 创建解码任务流 */
-    audio_pipeline_init(audio_ctrl->decoder_format);
-
-    /* 创建送数据到播放器的任务 */
-    TaskHandle_t play_task_handler;
-    audio_ctrl->player_task_working = true;
-    xTaskCreate(player_task, "play_task_work", CONFIG_MAIN_TASK_STACK_SIZE,
-                &play_task_handler, 18, NULL);
-
-    audio_ctrl->player_status |= 0x80;
-
-    /* 启动解码任务流 */
-    audio_work_pipeline_start();
-
-    return 0;
-}
-
-err_gpio_if:
-      audio_codec_delete_ctrl_if(audio_ctrl->ctrl_if);
-      audio_ctrl->ctrl_if = NULL;
-err_ctrl_if:
-      audio_codec_delete_data_if(audio_ctrl->data_if);
-      audio_ctrl->data_if = NULL;
-      return;
-}
-
-void player_stop() {
-    ESP_LOGI(TAG, "player_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-
-    /* clear draining flag */
-    audio_ctrl->player_status &= 0xFB;
-
-    if ((audio_ctrl->player_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->player_status &= 0xF7;
-    }
-
-    buffer_pool_reset(&(audio_ctrl->decoder_in_pool));
-    buffer_pool_reset(&(audio_ctrl->player_pool));
-
-    ESP_LOGI(TAG, "player_stop done, status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-}
-
-void player_drain() {
-  ESP_LOGI(TAG, "player_drain status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  audio_ctrl->player_status |= 0x04;
-  if ((audio_ctrl->player_status & 0x40) == 0x40) {
-    drain_data(&(audio_ctrl->decoder_in_pool));
-  } else {
-    drain_data(&(audio_ctrl->player_pool));
-  }
-}
-
-size_t player_insert_data(uint8_t *data, size_t data_size) {
-  // ESP_LOGV(TAG, "player_insert_data status: 0x%x/0x%x, data_size:%d",
-  //          audio_ctrl->codec_status, audio_ctrl->player_status, data_size);
-  int written_data = 0;
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    if ((audio_ctrl->player_status & 0x40) == 0x40) {
-      written_data = write_data(&(audio_ctrl->decoder_in_pool),
-                                (const unsigned char *)data, data_size);
-    } else {
-      if ((audio_ctrl->player_status & 0x20) == 0x20) {
-        written_data = write_data(&(audio_ctrl->player_pool),
-                                  (const unsigned char *)data, data_size);
-      }
-    }
-  }
-  if (written_data < 0) {
-    ESP_LOGE(TAG, "Write data into pool failed:%d", written_data);
-    written_data = 0;
-  }
-  return written_data;
-}
-
-void recorder_start() {
-    xSemaphoreTakeRecursive(audio_ctrl->recorder_lock, portMAX_DELAY);
-    ESP_LOGI(TAG, "recoder_start status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    recorder_chip_start();
-
-    if (audio_ctrl->codec_dev != NULL) {
-        esp_codec_dev_open(audio_ctrl->codec_dev, ESP_CODEC_DEV_WORK_MODE_RX);
-        audio_ctrl->recorder_status |= 0x08;
-    }
-
-    ESP_LOGI(TAG, "recoder_start done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-    xSemaphoreGiveRecursive(audio_ctrl->recorder_lock);
-}
-
-void recorder_stop() {
-    ESP_LOGI(TAG, "recorder_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    if ((audio_ctrl->recorder_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->recorder_status &= 0xF7;
-    }
-
-    ESP_LOGI(TAG, "recoder_stop done, status: 0x%x/0x%x",
-             audio_ctrl->codec_status, audio_ctrl->recorder_status);
-}
-
-size_t player_hw_play(uint8_t *data, size_t data_size) {
-  ESP_LOGV(TAG, "player_hw_play status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    return i2s_tx_write(data, data_size);
-  } else {
-    return 0;
-  }
-}
-
-int player_init(audio_ctrl_t *audio) {
-    audio_ctrl = audio;
-    audio_ctrl->player_lock = xSemaphoreCreateRecursiveMutex();
-    xSemaphoreGiveRecursive(audio_ctrl->player_lock);
-
-    if (audio_ctrl->decoder_sr == 0) {
-        audio_ctrl->decoder_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-    if (audio_ctrl->player_sr == 0) {
-        audio_ctrl->player_sr = DEFAULT_AUDIO_CTRL_SR;
-    }
-
-    /* 创建解码器和播放器缓存, 创建解码任务流 */
-    audio_pipeline_init(audio_ctrl->decoder_format);
-
-    /* 创建送数据到播放器的任务 */
-    TaskHandle_t play_task_handler;
-    audio_ctrl->player_task_working = true;
-    xTaskCreate(player_task, "play_task_work", CONFIG_MAIN_TASK_STACK_SIZE,
-                &play_task_handler, 18, NULL);
-
-    audio_ctrl->player_status |= 0x80;
-
-    /* 启动解码任务流 */
-    audio_work_pipeline_start();
-
-    return 0;
-}
-
-err_gpio_if:
-      audio_codec_delete_ctrl_if(audio_ctrl->ctrl_if);
-      audio_ctrl->ctrl_if = NULL;
-err_ctrl_if:
-      audio_codec_delete_data_if(audio_ctrl->data_if);
-      audio_ctrl->data_if = NULL;
-      return;
-}
-
-void player_stop() {
-    ESP_LOGI(TAG, "player_stop status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-
-    /* clear draining flag */
-    audio_ctrl->player_status &= 0xFB;
-
-    if ((audio_ctrl->player_status & 0x08) == 0x08) {
-        esp_codec_dev_close(audio_ctrl->codec_dev);
-        audio_ctrl->player_status &= 0xF7;
-    }
-
-    buffer_pool_reset(&(audio_ctrl->decoder_in_pool));
-    buffer_pool_reset(&(audio_ctrl->player_pool));
-
-    ESP_LOGI(TAG, "player_stop done, status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->player_status);
-}
-
-void player_drain() {
-  ESP_LOGI(TAG, "player_drain status: 0x%x/0x%x", audio_ctrl->codec_status,
-           audio_ctrl->player_status);
-  audio_ctrl->player_status |= 0x04;
-  if ((audio_ctrl->player_status & 0x40) == 0x40) {
-    drain_data(&(audio_ctrl->decoder_in_pool));
-  } else {
-    drain_data(&(audio_ctrl->player_pool));
-  }
-}
-
-size_t player_insert_data(uint8_t *data, size_t data_size) {
-  // ESP_LOGV(TAG, "player_insert_data status: 0x%x/0x%x, data_size:%d",
-  //          audio_ctrl->codec_status, audio_ctrl->player_status, data_size);
-  int written_data = 0;
-  if ((audio_ctrl->player_status & 0x08) == 0x08) {
-    if ((audio_ctrl->player_status & 0x40) == 0x40) {
-      written_data = write_data(&(audio_ctrl->decoder_in_pool),
-                                (const unsigned char *)data, data_size);
-    } else {
-      if ((audio_ctrl->player_status & 0x20) == 0x20) {
-        written_data = write_data(&(audio_ctrl->player_pool),
-                                  (const unsigned char *)data, data_size);
-      }
-    }
-  }
-  if (written_data < 0) {
-    ESP_LOGE(TAG, "Write data into pool failed:%d", written_data);
-    written_data = 0;
-  }
-  return written_data;
-}
-
-void recorder_start() {
-    xSemaphoreTakeRecursive(audio_ctrl->recorder_lock, portMAX_DELAY);
-    ESP_LOGI(TAG, "recoder_start status: 0x%x/0x%x", audio_ctrl->codec_status,
-             audio_ctrl->recorder_status);
-
-    recorder_chip_start();
-
-    if (audio_ctrl->codec_dev != NULL) {
-        esp_codec_dev_open(audio_ctrl->codec_dev, ESP_

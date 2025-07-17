@@ -4,12 +4,13 @@ cmake_minimum_required(VERSION 3.5)
 # 添加源文件
 set(SOURCES
     "audio/codec/es8388.c"
+    "audio/codec/es8311.c"
     "audio/i2s/i2s.c"
     "display/lcd/lcd.c"
     "display/touch/touch.c"
     "storage/sd/sd.c"
     "input/key/key.c"
-    "bus/i2c/i2c.c"
+    "bus/i2c/myi2c.c"
     "bus/spi/spi.c"
     "io/xl9555/xl9555.c"
 )

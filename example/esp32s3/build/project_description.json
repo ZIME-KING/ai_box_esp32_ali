@@ -1,7 +1,7 @@
 {
     "version":            "1.2",
     "project_name":       "voice_chat",
-    "project_version":    "d38e56a-dirty",
+    "project_version":    "5eebe17-dirty",
     "project_path":       "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3",
     "idf_path":           "D:/v5.4.2/esp-idf",
     "build_dir":          "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/build",
@@ -40,7 +40,7 @@
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "file": "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/build/esp-idf/BSP/libBSP.a",
-            "sources": [ "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/audio/codec/es8388.c", "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/audio/i2s/i2s.c", "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/display/lcd/lcd.c", "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/display/touch/touch.c", "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/storage/sd/sd.c", "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/input/key/key.c", "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/bus/i2c/i2c.c", "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/bus/spi/spi.c", "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/io/xl9555/xl9555.c" ],
+            "sources": [ "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/audio/codec/es8388.c", "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/audio/codec/es8311.c", "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/audio/i2s/i2s.c", "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/display/lcd/lcd.c", "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/display/touch/touch.c", "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/storage/sd/sd.c", "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/input/key/key.c", "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/bus/i2c/myi2c.c", "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/bus/spi/spi.c", "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/components/BSP/io/xl9555/xl9555.c" ],
             "include_dirs": [ ".", "board", "audio/codec", "audio/i2s", "display/lcd", "display/touch", "storage/sd", "input/key", "bus/i2c", "bus/spi", "io/xl9555" ]
         },
         "MYFATFS": {
@@ -130,8 +130,8 @@
             "managed_reqs": [],
             "managed_priv_reqs": [ "espressif__esp_lcd_ili9341" ],
             "file": "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/build/esp-idf/audio_board/libaudio_board.a",
-            "sources": [ "D:/Espressif/esp-adf/components/audio_board/esp32_s3_box_3/board.c", "D:/Espressif/esp-adf/components/audio_board/esp32_s3_box_3/board_pins_config.c" ],
-            "include_dirs": [ "./include", "./esp32_s3_box_3" ]
+            "sources": [ "D:/Espressif/esp-adf/components/audio_board/esp32_s3_box_lite/board.c", "D:/Espressif/esp-adf/components/audio_board/esp32_s3_box_lite/board_pins_config.c" ],
+            "include_dirs": [ "./include", "./esp32_s3_box_lite" ]
         },
         "audio_hal": {
             "alias": "idf::audio_hal",
@@ -3490,7 +3490,7 @@
             "priv_reqs": [ "esp_peripherals", "audio_sal", "audio_hal", "esp_dispatcher", "display_service", "espressif__esp_lcd_ili9341" ],
             "managed_reqs": [],
             "managed_priv_reqs": [ "espressif__esp_lcd_ili9341" ],
-            "include_dirs": [ "./include", "./esp32_s3_box_3" ]
+            "include_dirs": [ "./include", "./esp32_s3_box_lite" ]
         },
         "audio_hal": {
             "alias": "idf::audio_hal",

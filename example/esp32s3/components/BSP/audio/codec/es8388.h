@@ -28,7 +28,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "math.h"
-#include "bus/i2c/i2c.h"
+#include "bus/i2c/myi2c.h"
 #include "string.h"
 
 #define ES8388_ADDR 0x10 /* ES8388的器件地址,固定为0x10 */

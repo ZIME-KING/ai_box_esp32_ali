@@ -19,7 +19,7 @@
  */
 
 #include "es8388.h"
-#include "bus/i2c/i2c.h"
+#include "bus/i2c/myi2c.h"
 
 static const char *es8388_tag = "ES8388";
 i2c_master_dev_handle_t es8388_handle = NULL;

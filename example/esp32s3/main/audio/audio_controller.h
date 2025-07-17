@@ -28,10 +28,6 @@
 #include "es8388.h"
 #include "i2s.h"
 #include "xl9555.h"
-#include "esp_codec_dev.h"
-#include "audio_codec_data_if.h"
-#include "audio_codec_ctrl_if.h"
-#include "audio_codec_gpio_if.h"
 
 typedef enum {
   AUDIO_CTRL_RECORDER,
@@ -90,13 +86,6 @@ typedef struct {
   audio_element_handle_t player_filter;
 
   bool enable_using_sdcard_cache;
-  
-  // ESP Codec Device handles
-  esp_codec_dev_handle_t codec_dev;           /* 编解码器设备句柄 */
-  const audio_codec_data_if_t *data_if;       /* 数据接口 */
-  const audio_codec_ctrl_if_t *ctrl_if;       /* 控制接口 */
-  const audio_codec_gpio_if_t *gpio_if;       /* GPIO接口 */
-  const audio_codec_if_t *codec_if;           /* 编解码器接口 */
 } audio_ctrl_t;
 
 /* RECORDER */

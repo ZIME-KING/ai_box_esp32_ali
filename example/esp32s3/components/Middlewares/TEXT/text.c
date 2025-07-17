@@ -22,6 +22,7 @@
 
 #include "convert.h"
 #include "esp_log.h"
+#include <string.h>
 
 // #define ENABLE_TEXT_DEBUG
 
