@@ -13,4 +13,5 @@ set(example_inc
     "show"
     )
 idf_component_register(SRCS ${example_srcs}
-                       INCLUDE_DIRS ${example_inc})
+                       INCLUDE_DIRS ${example_inc}
+                       EMBED_FILES "music-16b-2c-8000hz.mp3")

@@ -153,6 +153,16 @@
         "children": [],
         "depends_on": null,
         "help": null,
+        "id": "SOC_LCDCAM_CAM_SUPPORTED",
+        "name": "SOC_LCDCAM_CAM_SUPPORTED",
+        "range": null,
+        "title": null,
+        "type": "bool"
+    },
+    {
+        "children": [],
+        "depends_on": null,
+        "help": null,
         "id": "SOC_LCDCAM_I80_LCD_SUPPORTED",
         "name": "SOC_LCDCAM_I80_LCD_SUPPORTED",
         "range": null,
@@ -1027,7 +1037,7 @@
         "name": "SOC_CPU_WATCHPOINT_MAX_REGION_SIZE",
         "range": null,
         "title": null,
-        "type": "int"
+        "type": "hex"
     },
     {
         "children": [],
@@ -2097,7 +2107,7 @@
         "name": "SOC_SDM_GROUPS",
         "range": null,
         "title": null,
-        "type": "bool"
+        "type": "int"
     },
     {
         "children": [],
@@ -3708,6 +3718,36 @@
         "range": null,
         "title": null,
         "type": "bool"
+    },
+    {
+        "children": [],
+        "depends_on": null,
+        "help": null,
+        "id": "SOC_LCDCAM_CAM_SUPPORT_RGB_YUV_CONV",
+        "name": "SOC_LCDCAM_CAM_SUPPORT_RGB_YUV_CONV",
+        "range": null,
+        "title": null,
+        "type": "bool"
+    },
+    {
+        "children": [],
+        "depends_on": null,
+        "help": null,
+        "id": "SOC_LCDCAM_CAM_PERIPH_NUM",
+        "name": "SOC_LCDCAM_CAM_PERIPH_NUM",
+        "range": null,
+        "title": null,
+        "type": "int"
+    },
+    {
+        "children": [],
+        "depends_on": null,
+        "help": null,
+        "id": "SOC_LCDCAM_CAM_DATA_WIDTH_MAX",
+        "name": "SOC_LCDCAM_CAM_DATA_WIDTH_MAX",
+        "range": null,
+        "title": null,
+        "type": "int"
     },
     {
         "children": [],
@@ -5428,7 +5468,7 @@
                     {
                         "children": [],
                         "depends_on": "SOC_SUPPORTS_SECURE_DL_MODE && <choice SECURE_UART_ROM_DL_MODE>",
-                        "help": "If set, during startup the app will burn an eFuse bit to permanently switch the UART ROM\nDownload Mode into a separate Secure Download mode. This option can only work if\nDownload Mode is not already disabled by eFuse.\n\nSecure Download mode limits the use of Download Mode functions to update SPI config,\nchanging baud rate, basic flash write and a command to return a summary of currently\nenabled security features (`get_security_info`).\n\nSecure Download mode is not compatible with the esptool.py flasher stub feature,\nespefuse.py, read/writing memory or registers, encrypted download, or any other\nfeatures that interact with unsupported Download Mode commands.\n\nSecure Download mode should be enabled in any application where Flash Encryption\nand/or Secure Boot is enabled. Disabling this option does not immediately cancel\nthe benefits of the security features, but it increases the potential \"attack\nsurface\" for an attacker to try and bypass them with a successful physical attack.\n\nIt is also possible to enable secure download mode at runtime by calling\nesp_efuse_enable_rom_secure_download_mode()\n\nNote: Secure Download mode is not available for ESP32 (includes revisions till ECO3).",
+                        "help": "If set, during startup the app will burn an eFuse bit to permanently switch the UART ROM\nDownload Mode into a separate Secure Download mode. This option can only work if\nDownload Mode is not already disabled by eFuse.\n\nSecure Download mode limits the use of Download Mode functions to update SPI config,\nchanging baud rate, basic flash write and a command to return a summary of currently\nenabled security features (`get_security_info`).\n\nSecure Download mode is not compatible with the esptool.py flasher stub feature,\nespefuse.py, read/writing memory or registers, encrypted download, or any other\nfeatures that interact with unsupported Download Mode commands.\n\nSecure Download mode should be enabled in any application where Flash Encryption\nand/or Secure Boot is enabled. Disabling this option does not immediately cancel\nthe benefits of the security features, but it increases the potential \"attack\nsurface\" for an attacker to try and bypass them with a successful physical attack.\n\nIt is also possible to enable secure download mode at runtime by calling\nesp_efuse_enable_rom_secure_download_mode()\n\nNote: Secure Download mode is not available for ESP32.",
                         "id": "SECURE_ENABLE_SECURE_ROM_DL_MODE",
                         "name": "SECURE_ENABLE_SECURE_ROM_DL_MODE",
                         "range": null,
@@ -15180,7 +15220,18 @@
                             {
                                 "children": [
                                     {
-                                        "children": [],
+                                        "children": [
+                                            {
+                                                "children": [],
+                                                "depends_on": "BT_BLE_50_EXTEND_ADV_EN && BT_BLUEDROID_ENABLED",
+                                                "help": "This enables BLE periodic advertising",
+                                                "id": "BT_BLE_50_PERIODIC_ADV_EN",
+                                                "name": "BT_BLE_50_PERIODIC_ADV_EN",
+                                                "range": null,
+                                                "title": "Enable BLE periodic advertising",
+                                                "type": "bool"
+                                            }
+                                        ],
                                         "depends_on": "BT_BLE_50_FEATURES_SUPPORTED && BT_BLUEDROID_ENABLED",
                                         "help": "This enables BLE extend advertising",
                                         "id": "BT_BLE_50_EXTEND_ADV_EN",
@@ -15190,17 +15241,18 @@
                                         "type": "bool"
                                     },
                                     {
-                                        "children": [],
-                                        "depends_on": "BT_BLE_50_FEATURES_SUPPORTED && BT_BLUEDROID_ENABLED",
-                                        "help": "This enables BLE periodic advertising",
-                                        "id": "BT_BLE_50_PERIODIC_ADV_EN",
-                                        "name": "BT_BLE_50_PERIODIC_ADV_EN",
-                                        "range": null,
-                                        "title": "Enable BLE periodic advertising",
-                                        "type": "bool"
-                                    },
-                                    {
-                                        "children": [],
+                                        "children": [
+                                            {
+                                                "children": [],
+                                                "depends_on": "BT_BLE_50_EXTEND_SCAN_EN && BT_BLUEDROID_ENABLED",
+                                                "help": "This enables BLE periodic advertising sync",
+                                                "id": "BT_BLE_50_EXTEND_SYNC_EN",
+                                                "name": "BT_BLE_50_EXTEND_SYNC_EN",
+                                                "range": null,
+                                                "title": "Enable BLE periodic advertising sync",
+                                                "type": "bool"
+                                            }
+                                        ],
                                         "depends_on": "BT_BLE_50_FEATURES_SUPPORTED && BT_BLUEDROID_ENABLED",
                                         "help": "This enables BLE extend scan",
                                         "id": "BT_BLE_50_EXTEND_SCAN_EN",
@@ -15212,51 +15264,11 @@
                                     {
                                         "children": [],
                                         "depends_on": "BT_BLE_50_FEATURES_SUPPORTED && BT_BLUEDROID_ENABLED",
-                                        "help": "This enables BLE periodic advertising sync",
-                                        "id": "BT_BLE_50_EXTEND_SYNC_EN",
-                                        "name": "BT_BLE_50_EXTEND_SYNC_EN",
-                                        "range": null,
-                                        "title": "Enable BLE periodic advertising sync",
-                                        "type": "bool"
-                                    },
-                                    {
-                                        "children": [],
-                                        "depends_on": "BT_BLE_50_FEATURES_SUPPORTED && BT_BLUEDROID_ENABLED",
                                         "help": "This enables BLE 5.0 direct test mode",
                                         "id": "BT_BLE_50_DTM_TEST_EN",
                                         "name": "BT_BLE_50_DTM_TEST_EN",
                                         "range": null,
                                         "title": "Enable BLE 5.0 DTM test",
-                                        "type": "bool"
-                                    },
-                                    {
-                                        "children": [],
-                                        "depends_on": "BT_BLUEDROID_ENABLED && BT_BLE_50_FEATURES_SUPPORTED && ((BT_CONTROLLER_ENABLED && SOC_ESP_NIMBLE_CONTROLLER) || BT_CONTROLLER_DISABLED) && BT_BLUEDROID_ENABLED",
-                                        "help": "This enables BLE periodic advertising sync transfer feature",
-                                        "id": "BT_BLE_FEAT_PERIODIC_ADV_SYNC_TRANSFER",
-                                        "name": "BT_BLE_FEAT_PERIODIC_ADV_SYNC_TRANSFER",
-                                        "range": null,
-                                        "title": "Enable BLE periodic advertising sync transfer feature",
-                                        "type": "bool"
-                                    },
-                                    {
-                                        "children": [],
-                                        "depends_on": "BT_BLUEDROID_ENABLED && BT_BLE_50_FEATURES_SUPPORTED && ((BT_CONTROLLER_ENABLED && SOC_ESP_NIMBLE_CONTROLLER) || BT_CONTROLLER_DISABLED) && BT_BLUEDROID_ENABLED",
-                                        "help": "Enable the periodic advertising enhancements",
-                                        "id": "BT_BLE_FEAT_PERIODIC_ADV_ENH",
-                                        "name": "BT_BLE_FEAT_PERIODIC_ADV_ENH",
-                                        "range": null,
-                                        "title": "Enable periodic adv enhancements(adi support)",
-                                        "type": "bool"
-                                    },
-                                    {
-                                        "children": [],
-                                        "depends_on": "BT_BLUEDROID_ENABLED && BT_BLE_50_FEATURES_SUPPORTED && ((BT_CONTROLLER_ENABLED && SOC_ESP_NIMBLE_CONTROLLER) || BT_CONTROLLER_DISABLED) && BT_BLUEDROID_ENABLED",
-                                        "help": "Enable the create sync enhancements",
-                                        "id": "BT_BLE_FEAT_CREATE_SYNC_ENH",
-                                        "name": "BT_BLE_FEAT_CREATE_SYNC_ENH",
-                                        "range": null,
-                                        "title": "Enable create sync enhancements(reporting disable and duplicate filtering enable support)",
                                         "type": "bool"
                                     }
                                 ],
@@ -15268,6 +15280,36 @@
                                 "range": null,
                                 "title": "Enable BLE 5.0 features(please disable BLE 4.2 if enable BLE 5.0)",
                                 "type": "menu"
+                            },
+                            {
+                                "children": [],
+                                "depends_on": "BT_BLUEDROID_ENABLED && BT_BLE_50_PERIODIC_ADV_EN && ((BT_CONTROLLER_ENABLED && SOC_ESP_NIMBLE_CONTROLLER) || BT_CONTROLLER_DISABLED) && BT_BLUEDROID_ENABLED",
+                                "help": "This enables BLE periodic advertising sync transfer feature",
+                                "id": "BT_BLE_FEAT_PERIODIC_ADV_SYNC_TRANSFER",
+                                "name": "BT_BLE_FEAT_PERIODIC_ADV_SYNC_TRANSFER",
+                                "range": null,
+                                "title": "Enable BLE periodic advertising sync transfer feature",
+                                "type": "bool"
+                            },
+                            {
+                                "children": [],
+                                "depends_on": "BT_BLUEDROID_ENABLED && BT_BLE_50_PERIODIC_ADV_EN && ((BT_CONTROLLER_ENABLED && SOC_ESP_NIMBLE_CONTROLLER) || BT_CONTROLLER_DISABLED) && BT_BLUEDROID_ENABLED",
+                                "help": "Enable the periodic advertising enhancements",
+                                "id": "BT_BLE_FEAT_PERIODIC_ADV_ENH",
+                                "name": "BT_BLE_FEAT_PERIODIC_ADV_ENH",
+                                "range": null,
+                                "title": "Enable periodic adv enhancements(adi support)",
+                                "type": "bool"
+                            },
+                            {
+                                "children": [],
+                                "depends_on": "BT_BLUEDROID_ENABLED && BT_BLE_50_EXTEND_SYNC_EN && ((BT_CONTROLLER_ENABLED && SOC_ESP_NIMBLE_CONTROLLER) || BT_CONTROLLER_DISABLED) && BT_BLUEDROID_ENABLED",
+                                "help": "Enable the create sync enhancements",
+                                "id": "BT_BLE_FEAT_CREATE_SYNC_ENH",
+                                "name": "BT_BLE_FEAT_CREATE_SYNC_ENH",
+                                "range": null,
+                                "title": "Enable create sync enhancements(reporting disable and duplicate filtering enable support)",
+                                "type": "bool"
                             },
                             {
                                 "children": [
@@ -15473,6 +15515,16 @@
                                 "name": "BT_BLE_FEAT_CONN_SUBRATING",
                                 "range": null,
                                 "title": "Enable BLE connection subrating feature",
+                                "type": "bool"
+                            },
+                            {
+                                "children": [],
+                                "depends_on": "BT_BLE_ENABLED && BT_BLUEDROID_ENABLED",
+                                "help": "This enables BLE vendor HCI command and event",
+                                "id": "BT_BLE_VENDOR_HCI_EN",
+                                "name": "BT_BLE_VENDOR_HCI_EN",
+                                "range": null,
+                                "title": "Enable BLE Vendor HCI command and event",
                                 "type": "bool"
                             },
                             {
@@ -16778,7 +16830,7 @@
                                         "is_menuconfig": true,
                                         "name": "BT_NIMBLE_HID_SERVICE",
                                         "range": null,
-                                        "title": "HID service",
+                                        "title": "Human Interface Device service",
                                         "type": "menu"
                                     },
                                     {
@@ -16887,12 +16939,12 @@
                                             }
                                         ],
                                         "depends_on": "BT_NIMBLE_GATT_SERVER && BT_NIMBLE_ENABLED",
-                                        "help": "Enable DIS service support",
+                                        "help": "Enable Device Information service support",
                                         "id": "BT_NIMBLE_DIS_SERVICE",
                                         "is_menuconfig": true,
                                         "name": "BT_NIMBLE_DIS_SERVICE",
                                         "range": null,
-                                        "title": "DIS service",
+                                        "title": "Device Information Service",
                                         "type": "menu"
                                     },
                                     {
@@ -17139,8 +17191,8 @@
                                             }
                                         ],
                                         "depends_on": "BT_NIMBLE_GAP_SERVICE && BT_NIMBLE_GATT_SERVER && BT_NIMBLE_ENABLED",
-                                        "id": "component-config-bluetooth-nimble-options-ble-services-ppcp-settings",
-                                        "title": "PPCP settings",
+                                        "id": "component-config-bluetooth-nimble-options-ble-services-peripheral-preferred-connection-parameters-ppcp-settings",
+                                        "title": "Peripheral Preferred Connection Parameters (PPCP) settings",
                                         "type": "menu"
                                     },
                                     {
@@ -17288,6 +17340,16 @@
                                 "name": "BT_NIMBLE_GATTC_PROC_PREEMPTION_PROTECT",
                                 "range": null,
                                 "title": "Gatt-proc preemption protect check",
+                                "type": "bool"
+                            },
+                            {
+                                "children": [],
+                                "depends_on": "BT_NIMBLE_ENABLED && BT_NIMBLE_ENABLED",
+                                "help": "If enabled, when a service request (e.g. read, write) to a server fails, and the ATT\nerror suggests insufficient security, then the central will initiate pairing and retry\nthe service request.",
+                                "id": "BT_NIMBLE_GATTC_AUTO_PAIR",
+                                "name": "BT_NIMBLE_GATTC_AUTO_PAIR",
+                                "range": null,
+                                "title": "Automatically pair upon receiving service request failure",
                                 "type": "bool"
                             },
                             {
@@ -18271,11 +18333,11 @@
                                                             {
                                                                 "children": [],
                                                                 "depends_on": "RTC_CLK_SRC_INT_RC && <choice BT_CTRL_LOW_POWER_CLOCK>",
-                                                                "help": "Internal 150kHz RC oscillator. The accuracy of this clock is a lot larger than 500ppm which is required\nin Bluetooth communication, so don't select this option in scenarios such as BLE connection state.",
+                                                                "help": "Internal 136kHz RC oscillator. The accuracy of this clock is a lot larger than 500ppm which is required\nin Bluetooth communication, so don't select this option in scenarios such as BLE connection state.",
                                                                 "id": "BT_CTRL_LPCLK_SEL_RTC_SLOW",
                                                                 "name": "BT_CTRL_LPCLK_SEL_RTC_SLOW",
                                                                 "range": null,
-                                                                "title": "Internal 150kHz RC oscillator",
+                                                                "title": "Internal 136kHz RC oscillator",
                                                                 "type": "bool"
                                                             }
                                                         ],
@@ -18690,7 +18752,28 @@
                                         "type": "int"
                                     },
                                     {
-                                        "children": [],
+                                        "children": [
+                                            {
+                                                "children": [],
+                                                "depends_on": "BT_BLE_LOG_SPI_OUT_HCI_ENABLED",
+                                                "help": "SPI transaction buffer size for HCI logs.\nThere will be 2 SPI DMA buffers with the same size.",
+                                                "id": "BT_BLE_LOG_SPI_OUT_HCI_BUF_SIZE",
+                                                "name": "BT_BLE_LOG_SPI_OUT_HCI_BUF_SIZE",
+                                                "range": null,
+                                                "title": "SPI transaction buffer size for HCI logs",
+                                                "type": "int"
+                                            },
+                                            {
+                                                "children": [],
+                                                "depends_on": "BT_BLE_LOG_SPI_OUT_HCI_ENABLED",
+                                                "help": "HCI task count",
+                                                "id": "BT_BLE_LOG_SPI_OUT_HCI_TASK_CNT",
+                                                "name": "BT_BLE_LOG_SPI_OUT_HCI_TASK_CNT",
+                                                "range": null,
+                                                "title": "HCI task count",
+                                                "type": "int"
+                                            }
+                                        ],
                                         "depends_on": "BT_BLE_LOG_SPI_OUT_ENABLED",
                                         "help": "Enable logging of HCI packets to the SPI bus when BLE SPI log output is enabled.",
                                         "id": "BT_BLE_LOG_SPI_OUT_HCI_ENABLED",
@@ -18700,7 +18783,28 @@
                                         "type": "bool"
                                     },
                                     {
-                                        "children": [],
+                                        "children": [
+                                            {
+                                                "children": [],
+                                                "depends_on": "BT_BLE_LOG_SPI_OUT_HOST_ENABLED",
+                                                "help": "SPI transaction buffer size for host logs.\nThere will be 2 SPI DMA buffers with the same size.",
+                                                "id": "BT_BLE_LOG_SPI_OUT_HOST_BUF_SIZE",
+                                                "name": "BT_BLE_LOG_SPI_OUT_HOST_BUF_SIZE",
+                                                "range": null,
+                                                "title": "SPI transaction buffer size for host logs",
+                                                "type": "int"
+                                            },
+                                            {
+                                                "children": [],
+                                                "depends_on": "BT_BLE_LOG_SPI_OUT_HOST_ENABLED",
+                                                "help": "Host task count.",
+                                                "id": "BT_BLE_LOG_SPI_OUT_HOST_TASK_CNT",
+                                                "name": "BT_BLE_LOG_SPI_OUT_HOST_TASK_CNT",
+                                                "range": null,
+                                                "title": "Host task count",
+                                                "type": "int"
+                                            }
+                                        ],
                                         "depends_on": "BT_BLE_LOG_SPI_OUT_ENABLED",
                                         "help": "This configuration applies to the logs of both Bluedroid Host and NimBLE Host.\nWhen BLE SPI log output is enabled, this option allows host logs to be transmitted via SPI.",
                                         "id": "BT_BLE_LOG_SPI_OUT_HOST_ENABLED",
@@ -18852,6 +18956,16 @@
                                         "range": null,
                                         "title": "SPI transaction buffer size for LE Audio logs",
                                         "type": "int"
+                                    },
+                                    {
+                                        "children": [],
+                                        "depends_on": "BT_BLE_LOG_SPI_OUT_LE_AUDIO_ENABLED",
+                                        "help": "LE audio task count",
+                                        "id": "BT_BLE_LOG_SPI_OUT_LE_AUDIO_TASK_CNT",
+                                        "name": "BT_BLE_LOG_SPI_OUT_LE_AUDIO_TASK_CNT",
+                                        "range": null,
+                                        "title": "LE audio task count",
+                                        "type": "int"
                                     }
                                 ],
                                 "depends_on": "BT_BLE_LOG_SPI_OUT_ENABLED",
@@ -18860,6 +18974,37 @@
                                 "name": "BT_BLE_LOG_SPI_OUT_LE_AUDIO_ENABLED",
                                 "range": null,
                                 "title": "Enable LE Audio log output to SPI",
+                                "type": "bool"
+                            },
+                            {
+                                "children": [
+                                    {
+                                        "children": [],
+                                        "depends_on": "BT_BLE_LOG_SPI_OUT_MESH_ENABLED",
+                                        "help": "SPI transaction buffer size for BLE mesh logs.\nThere will be 2 SPI DMA buffers with the same size.",
+                                        "id": "BT_BLE_LOG_SPI_OUT_MESH_BUF_SIZE",
+                                        "name": "BT_BLE_LOG_SPI_OUT_MESH_BUF_SIZE",
+                                        "range": null,
+                                        "title": "SPI transaction buffer size for BLE mesh logs",
+                                        "type": "int"
+                                    },
+                                    {
+                                        "children": [],
+                                        "depends_on": "BT_BLE_LOG_SPI_OUT_MESH_ENABLED",
+                                        "help": "Mesh task count",
+                                        "id": "BT_BLE_LOG_SPI_OUT_MESH_TASK_CNT",
+                                        "name": "BT_BLE_LOG_SPI_OUT_MESH_TASK_CNT",
+                                        "range": null,
+                                        "title": "Mesh task count",
+                                        "type": "int"
+                                    }
+                                ],
+                                "depends_on": "BT_BLE_LOG_SPI_OUT_ENABLED",
+                                "help": "Enable BLE mesh log output to SPI",
+                                "id": "BT_BLE_LOG_SPI_OUT_MESH_ENABLED",
+                                "name": "BT_BLE_LOG_SPI_OUT_MESH_ENABLED",
+                                "range": null,
+                                "title": "Enable BLE mesh log output to SPI",
                                 "type": "bool"
                             }
                         ],
@@ -21617,6 +21762,16 @@
                         "range": null,
                         "title": "Enabled full OCSP checks for ESP-TLS",
                         "type": "bool"
+                    },
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": "Enable support for dynamic buffer strategy for ESP-TLS. This is the hidden config option kept\nfor external components like OTA, to find out whether the dynamic buffer strategy is supported\nfor particular ESP-IDF version.",
+                        "id": "ESP_TLS_DYN_BUF_STRATEGY_SUPPORTED",
+                        "name": "ESP_TLS_DYN_BUF_STRATEGY_SUPPORTED",
+                        "range": null,
+                        "title": null,
+                        "type": "bool"
                     }
                 ],
                 "depends_on": null,
@@ -22019,7 +22174,7 @@
                 "children": [
                     {
                         "children": [],
-                        "depends_on": "SOC_MIPI_CSI_SUPPORTED && (SOC_MIPI_CSI_SUPPORTED || SOC_LCDCAM_CAM_SUPPORTED)",
+                        "depends_on": "SOC_MIPI_CSI_SUPPORTED && (SOC_MIPI_CSI_SUPPORTED || SOC_ISP_DVP_SUPPORTED || SOC_LCDCAM_CAM_SUPPORTED)",
                         "help": "Ensure the CSI driver ISR is Cache-Safe. When enabled, the ISR handler\nwill be available when the cache is disabled.",
                         "id": "CAM_CTLR_MIPI_CSI_ISR_CACHE_SAFE",
                         "name": "CAM_CTLR_MIPI_CSI_ISR_CACHE_SAFE",
@@ -22029,7 +22184,7 @@
                     },
                     {
                         "children": [],
-                        "depends_on": "SOC_MIPI_CSI_SUPPORTED || SOC_LCDCAM_CAM_SUPPORTED",
+                        "depends_on": "SOC_ISP_DVP_SUPPORTED && (SOC_MIPI_CSI_SUPPORTED || SOC_ISP_DVP_SUPPORTED || SOC_LCDCAM_CAM_SUPPORTED)",
                         "help": "Ensure the ISP_DVP driver ISR is Cache-Safe. When enabled, the ISR handler\nwill be available when the cache is disabled.",
                         "id": "CAM_CTLR_ISP_DVP_ISR_CACHE_SAFE",
                         "name": "CAM_CTLR_ISP_DVP_ISR_CACHE_SAFE",
@@ -22039,7 +22194,7 @@
                     },
                     {
                         "children": [],
-                        "depends_on": "SOC_LCDCAM_CAM_SUPPORTED && (SOC_MIPI_CSI_SUPPORTED || SOC_LCDCAM_CAM_SUPPORTED)",
+                        "depends_on": "SOC_LCDCAM_CAM_SUPPORTED && (SOC_MIPI_CSI_SUPPORTED || SOC_ISP_DVP_SUPPORTED || SOC_LCDCAM_CAM_SUPPORTED)",
                         "help": "Ensure the DVP driver ISR is Cache-Safe. When enabled, the ISR handler\nwill be available when the cache is disabled.",
                         "id": "CAM_CTLR_DVP_CAM_ISR_CACHE_SAFE",
                         "name": "CAM_CTLR_DVP_CAM_ISR_CACHE_SAFE",
@@ -22048,7 +22203,7 @@
                         "type": "bool"
                     }
                 ],
-                "depends_on": "SOC_MIPI_CSI_SUPPORTED || SOC_LCDCAM_CAM_SUPPORTED",
+                "depends_on": "SOC_MIPI_CSI_SUPPORTED || SOC_ISP_DVP_SUPPORTED || SOC_LCDCAM_CAM_SUPPORTED",
                 "id": "component-config-esp-driver-camera-controller-configurations",
                 "title": "ESP-Driver:Camera Controller Configurations",
                 "type": "menu"
@@ -23972,6 +24127,16 @@
                         "name": "ESP_CLK_RC32K_NOT_TO_USE",
                         "range": null,
                         "title": null,
+                        "type": "bool"
+                    },
+                    {
+                        "children": [],
+                        "depends_on": "SOC_PMU_PVT_SUPPORTED",
+                        "help": "If enabled, hp & lp voltage can be auto adjust by PVT characteristic.\nOtherwise, internal voltage will be set to fix dbias.\nThis is a must for stable mass production. Disable for debugging only.",
+                        "id": "ESP_ENABLE_PVT",
+                        "name": "ESP_ENABLE_PVT",
+                        "range": null,
+                        "title": "Auto adjust hp & lp voltage using pvt function (MUST ENABLE FOR MP)",
                         "type": "bool"
                     }
                 ],
@@ -30933,7 +31098,7 @@
                         "id": "LWIP_DHCP_OPTIONS_LEN",
                         "name": "LWIP_DHCP_OPTIONS_LEN",
                         "range": [
-                            68,
+                            69,
                             255
                         ],
                         "title": "DHCP total option length",
@@ -34791,6 +34956,16 @@
                                         "range": null,
                                         "title": "Enable Openthread Command-Line Interface",
                                         "type": "bool"
+                                    },
+                                    {
+                                        "children": [],
+                                        "depends_on": "OPENTHREAD_ENABLED",
+                                        "help": "A prefix string used before a Thread CLI command, allowing the ESP console to identify\nit and delegate the remaining command to the OpenThread callback for processing.",
+                                        "id": "OPENTHREAD_CONSOLE_COMMAND_PREFIX",
+                                        "name": "OPENTHREAD_CONSOLE_COMMAND_PREFIX",
+                                        "range": null,
+                                        "title": "The prefix of the openthread CLI command registered on the esp console",
+                                        "type": "string"
                                     }
                                 ],
                                 "depends_on": "OPENTHREAD_ENABLED",
@@ -34931,6 +35106,16 @@
                                                         "range": null,
                                                         "title": "The port of openthread trel service",
                                                         "type": "int"
+                                                    },
+                                                    {
+                                                        "children": [],
+                                                        "depends_on": "OPENTHREAD_RADIO_TREL && (EXAMPLE_CONNECT_WIFI || EXAMPLE_CONNECT_ETHERNET) && OPENTHREAD_ENABLED",
+                                                        "help": "Configure the receive buffer size of TREL service.",
+                                                        "id": "OPENTHREAD_TREL_BUFFER_SIZE",
+                                                        "name": "OPENTHREAD_TREL_BUFFER_SIZE",
+                                                        "range": null,
+                                                        "title": "The receive buffer size of openthread trel",
+                                                        "type": "int"
                                                     }
                                                 ],
                                                 "depends_on": "(EXAMPLE_CONNECT_WIFI || EXAMPLE_CONNECT_ETHERNET) && OPENTHREAD_ENABLED",
@@ -35027,6 +35212,16 @@
                                                         "name": "OPENTHREAD_RCP_SPI",
                                                         "range": null,
                                                         "title": "SPI RCP",
+                                                        "type": "bool"
+                                                    },
+                                                    {
+                                                        "children": [],
+                                                        "depends_on": "ESP_CONSOLE_SECONDARY_USB_SERIAL_JTAG && !OPENTHREAD_CONSOLE_TYPE_USB_SERIAL_JTAG && <choice OPENTHREAD_RCP_TRANSPORT>",
+                                                        "help": "Select this to enable connection to host over USB JTAG serial.",
+                                                        "id": "OPENTHREAD_RCP_USB_SERIAL_JTAG",
+                                                        "name": "OPENTHREAD_RCP_USB_SERIAL_JTAG",
+                                                        "range": null,
+                                                        "title": "USB RCP",
                                                         "type": "bool"
                                                     }
                                                 ],
@@ -35289,46 +35484,7 @@
                                         "type": "bool"
                                     },
                                     {
-                                        "children": [
-                                            {
-                                                "children": [
-                                                    {
-                                                        "children": [],
-                                                        "depends_on": "OPENTHREAD_PARENT_SEARCH_MTD && OPENTHREAD_ENABLED",
-                                                        "help": null,
-                                                        "id": "OPENTHREAD_PARENT_SEARCH_CHECK_INTERVAL_MINS",
-                                                        "name": "OPENTHREAD_PARENT_SEARCH_CHECK_INTERVAL_MINS",
-                                                        "range": null,
-                                                        "title": "The interval in minutes for a child to check the trigger condition to perform a parent search",
-                                                        "type": "int"
-                                                    },
-                                                    {
-                                                        "children": [],
-                                                        "depends_on": "OPENTHREAD_PARENT_SEARCH_MTD && OPENTHREAD_ENABLED",
-                                                        "help": null,
-                                                        "id": "OPENTHREAD_PARENT_SEARCH_BACKOFF_INTERVAL_MINS",
-                                                        "name": "OPENTHREAD_PARENT_SEARCH_BACKOFF_INTERVAL_MINS",
-                                                        "range": null,
-                                                        "title": "The backoff interval in minutes for a child to not perform a parent search after triggering one",
-                                                        "type": "int"
-                                                    },
-                                                    {
-                                                        "children": [],
-                                                        "depends_on": "OPENTHREAD_PARENT_SEARCH_MTD && OPENTHREAD_ENABLED",
-                                                        "help": null,
-                                                        "id": "OPENTHREAD_PARENT_SEARCH_RSS_THRESHOLD",
-                                                        "name": "OPENTHREAD_PARENT_SEARCH_RSS_THRESHOLD",
-                                                        "range": null,
-                                                        "title": "The RSS threshold used to trigger a parent search",
-                                                        "type": "int"
-                                                    }
-                                                ],
-                                                "depends_on": "OPENTHREAD_PARENT_SEARCH_MTD && OPENTHREAD_ENABLED",
-                                                "id": "component-config-openthread-openthread-thread-core-features-enable-parent-search-parent-search-configurations",
-                                                "title": "Parent Search Configurations",
-                                                "type": "menu"
-                                            }
-                                        ],
+                                        "children": [],
                                         "depends_on": "OPENTHREAD_MTD && OPENTHREAD_ENABLED",
                                         "help": "Select this option to enable \"Periodic Parent Search\" function for MTD. This checks the average\nRSS to its current parent every periodically and starts a parent search process if the average\nRSS is below OPENTHREAD_PARENT_SEARCH_RSS_THRESHOLD. This feature is always enabled for FTDs.",
                                         "id": "OPENTHREAD_PARENT_SEARCH_MTD",
@@ -35336,6 +35492,64 @@
                                         "range": null,
                                         "title": "Enable Parent Search",
                                         "type": "bool"
+                                    },
+                                    {
+                                        "children": [
+                                            {
+                                                "children": [],
+                                                "depends_on": "(OPENTHREAD_PARENT_SEARCH_MTD || OPENTHREAD_FTD) && OPENTHREAD_ENABLED",
+                                                "help": null,
+                                                "id": "OPENTHREAD_PARENT_SEARCH_CHECK_INTERVAL_MINS",
+                                                "name": "OPENTHREAD_PARENT_SEARCH_CHECK_INTERVAL_MINS",
+                                                "range": null,
+                                                "title": "The interval in minutes for a child to check the trigger condition to perform a parent search",
+                                                "type": "int"
+                                            },
+                                            {
+                                                "children": [],
+                                                "depends_on": "(OPENTHREAD_PARENT_SEARCH_MTD || OPENTHREAD_FTD) && OPENTHREAD_ENABLED",
+                                                "help": null,
+                                                "id": "OPENTHREAD_PARENT_SEARCH_BACKOFF_INTERVAL_MINS",
+                                                "name": "OPENTHREAD_PARENT_SEARCH_BACKOFF_INTERVAL_MINS",
+                                                "range": null,
+                                                "title": "The backoff interval in minutes for a child to not perform a parent search after triggering one",
+                                                "type": "int"
+                                            },
+                                            {
+                                                "children": [],
+                                                "depends_on": "(OPENTHREAD_PARENT_SEARCH_MTD || OPENTHREAD_FTD) && OPENTHREAD_ENABLED",
+                                                "help": null,
+                                                "id": "OPENTHREAD_PARENT_SEARCH_RSS_THRESHOLD",
+                                                "name": "OPENTHREAD_PARENT_SEARCH_RSS_THRESHOLD",
+                                                "range": null,
+                                                "title": "The RSS threshold used to trigger a parent search",
+                                                "type": "int"
+                                            },
+                                            {
+                                                "children": [],
+                                                "depends_on": "(OPENTHREAD_PARENT_SEARCH_MTD || OPENTHREAD_FTD) && OPENTHREAD_ENABLED",
+                                                "help": null,
+                                                "id": "OPENTHREAD_PARENT_SEARCH_RESELECT_TIMEOUT_MINS",
+                                                "name": "OPENTHREAD_PARENT_SEARCH_RESELECT_TIMEOUT_MINS",
+                                                "range": null,
+                                                "title": "The parent reselect timeout duration in minutes used on FTD child devices",
+                                                "type": "int"
+                                            },
+                                            {
+                                                "children": [],
+                                                "depends_on": "(OPENTHREAD_PARENT_SEARCH_MTD || OPENTHREAD_FTD) && OPENTHREAD_ENABLED",
+                                                "help": null,
+                                                "id": "OPENTHREAD_PARENT_SEARCH_RSS_MARGIN",
+                                                "name": "OPENTHREAD_PARENT_SEARCH_RSS_MARGIN",
+                                                "range": null,
+                                                "title": "The RSS margin over the current parent RSS used on FTD child devices",
+                                                "type": "int"
+                                            }
+                                        ],
+                                        "depends_on": "(OPENTHREAD_PARENT_SEARCH_MTD || OPENTHREAD_FTD) && OPENTHREAD_ENABLED",
+                                        "id": "component-config-openthread-openthread-thread-core-features-parent-search-configurations",
+                                        "title": "Parent Search Configurations",
+                                        "type": "menu"
                                     },
                                     {
                                         "children": [

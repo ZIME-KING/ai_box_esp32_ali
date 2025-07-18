@@ -127,16 +127,16 @@
 
 /******** net config 配置文件 ********/
 #ifndef CONFIG_DEFAULT_APIKEY
-#define CONFIG_DEFAULT_APIKEY "sk-"
+#define CONFIG_DEFAULT_APIKEY "sk-85d1601205d246a2b541c794d3dd3561"
 #endif
 #ifndef CONFIG_DEFAULT_URL
 #define CONFIG_DEFAULT_URL "wss://dashscope.aliyuncs.com/api-ws/v1/inference"
 #endif
 #ifndef CONFIG_DEFAULT_APP_ID
-#define CONFIG_DEFAULT_APP_ID "empty_app_id"
+#define CONFIG_DEFAULT_APP_ID "18c468a404004c9c95ebb6b2d0b06e15"
 #endif
 #ifndef CONFIG_DEFAULT_WORKSPACE_ID
-#define CONFIG_DEFAULT_WORKSPACE_ID "llm-empty_workspace_id"
+#define CONFIG_DEFAULT_WORKSPACE_ID "llm-4wlqoa100jpykcdz"
 #endif
 
 /******** model config 配置文件 ********/

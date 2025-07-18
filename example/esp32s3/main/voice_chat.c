@@ -99,20 +99,20 @@ void audio_ctrl_callback(audio_ctrl_type_t type, audio_event_t event)
 {
   if (type == AUDIO_CTRL_PLAYER)
   {
-    lcd_show_clear(&hw_show);
+    //lcd_show_clear(&hw_show);
     if (event == AUDIO_PLAYER_STOPPED)
     {
       ESP_LOGI(TAG, "== AUDIO_PLAYER_STOPPED ==");
       vTaskDelay(pdMS_TO_TICKS(100));
       player_stop();
       conversation_set_action(ACTION_PLAYER_STOPPED, NULL, 0);
-      lcd_show_text_string_append(&hw_show, "播放完成");
+      //lcd_show_text_string_append(&hw_show, "播放完成");
     }
     else if (event == AUDIO_PLAYER_STARTED)
     {
       ESP_LOGI(TAG, "== AUDIO_PLAYER_STARTED ==");
       conversation_set_action(ACTION_PLAYER_STARTED, NULL, 0);
-      lcd_show_text_string_append(&hw_show, "播放中 ...");
+      //lcd_show_text_string_append(&hw_show, "播放中 ...");
     }
   }
 }
@@ -127,10 +127,10 @@ void event_callback(conv_event_t *event, void *param)
     {
       uint32_t tts_latency = esp_log_timestamp() - speech_end_timestamp;
       tts_first_frame_flag = false;
-      lcd_show_clear(&latency_title_show);
+      //lcd_show_clear(&latency_title_show);
       char latency_info[64] = {0};
       snprintf(latency_info, 63, "首包延迟 %ldms", tts_latency);
-      lcd_show_text_string_append(&latency_title_show, latency_info);
+      //lcd_show_text_string_append(&latency_title_show, latency_info);
     }
   }
   else
@@ -141,26 +141,26 @@ void event_callback(conv_event_t *event, void *param)
       g_dialog_state = event->dialog_state;
       ESP_LOGI(TAG, "- DIALOG_STATE_CHANGED: %s -",
                get_dialog_state_changed_string(event->dialog_state));
-      lcd_show_clear(&sub_title_show);
+      //lcd_show_clear(&sub_title_show);
       if (event->dialog_state == DIALOG_STATE_LISTENING)
       {
-        lcd_show_color(&content_show, RED);
-        lcd_show_text_string_append(&sub_title_show, "听 ...");
+        //lcd_show_color(&content_show, RED);
+        //lcd_show_text_string_append(&sub_title_show, "听 ...");
         recorder_start();
       }
       else if (event->dialog_state == DIALOG_STATE_IDLE)
       {
         first_speech_content_flag = true;
         first_responding_content_flag = true;
-        lcd_show_text_string_append(&sub_title_show, "空闲 ...");
+        //lcd_show_text_string_append(&sub_title_show, "空闲 ...");
       }
       else if (event->dialog_state == DIALOG_STATE_RESPONDING)
       {
-        lcd_show_text_string_append(&sub_title_show, "说 ...");
+        //lcd_show_text_string_append(&sub_title_show, "说 ...");
       }
       else if (event->dialog_state == DIALOG_STATE_THINKING)
       {
-        lcd_show_text_string_append(&sub_title_show, "思考 ...");
+        //lcd_show_text_string_append(&sub_title_show, "思考 ...");
       }
     }
     else if (event->msg_type == CONV_EVENT_SPEECH_ENDED)
@@ -182,13 +182,13 @@ void event_callback(conv_event_t *event, void *param)
           first_speech_content_flag)
       {
         first_speech_content_flag = false;
-        lcd_show_color(&content_show, RED);
+        //lcd_show_color(&content_show, RED);
       }
       if (event->msg_type == CONV_EVENT_RESPONDING_CONTENT &&
           first_responding_content_flag)
       {
         first_responding_content_flag = false;
-        lcd_show_color(&content_show, GREEN);
+        //lcd_show_color(&content_show, GREEN);
       }
 
       cJSON *response_json = cJSON_Parse(event->msg);
@@ -213,7 +213,7 @@ void event_callback(conv_event_t *event, void *param)
                  event->msg_type == CONV_EVENT_SPEECH_CONTENT ? "HUMAN" : "AI",
                  text->valuestring);
 
-        lcd_show_text_string_append(&content_show, text->valuestring);
+        //lcd_show_text_string_append(&content_show, text->valuestring);
 
       OUT_CONTENT:
         cJSON_Delete(response_json);
@@ -639,15 +639,14 @@ void board_dnesp32s3_init()
   myiic_init();  /* MYIIC初始化 */
   user_es8311_init(); /* ES8311初始化 */
 
-
   // xl9555_init(); /* XL9555初始化 */
-  // spilcd_init(); /* SPILCD初始化 */
+  // spi//lcd_init(); /* SPILCD初始化 */
 
   // /* ES8388初始化 */
   // while (es8388_init()) {
-  //   //spilcd_show_string(30, 110, 200, 16, 16, "ES8388 Error", RED);
+  //   //spi//lcd_show_string(30, 110, 200, 16, 16, "ES8388 Error", RED);
   //   vTaskDelay(pdMS_TO_TICKS(200));
-  //   //spilcd_fill(30, 110, 239, 126, WHITE);
+  //   //spi//lcd_fill(30, 110, 239, 126, WHITE);
   //   vTaskDelay(pdMS_TO_TICKS(200));
   // }
 
@@ -655,9 +654,9 @@ void board_dnesp32s3_init()
 
   //   /* 检测不到SD卡 */
   //   while (sd_spi_init()) {
-  //  //   spilcd_show_string(30, 110, 200, 16, 16, "SD Card Error!", RED);
+  //  //   spi//lcd_show_string(30, 110, 200, 16, 16, "SD Card Error!", RED);
   //     vTaskDelay(pdMS_TO_TICKS(500));
-  // //    spilcd_show_string(30, 130, 200, 16, 16, "Please Check! ", RED);
+  // //    spi//lcd_show_string(30, 130, 200, 16, 16, "Please Check! ", RED);
   //     vTaskDelay(pdMS_TO_TICKS(500));
   //   }
 
@@ -667,8 +666,8 @@ void board_dnesp32s3_init()
   // char show_buf[32];
   // while (fonts_init()) {
   //   /* 检查字库 */
-  //   spilcd_clear(WHITE);
-  //   spilcd_show_string(30, 30, 200, 16, 16, "ESP32-S3", RED);
+  //   spi//lcd_clear(WHITE);
+  //   spi//lcd_show_string(30, 30, 200, 16, 16, "ESP32-S3", RED);
 
   //   key = fonts_update_font(30, 50, 16, (uint8_t*)"0:", RED); /* 更新字库 */
 
@@ -676,76 +675,80 @@ void board_dnesp32s3_init()
   //     /* 更新失败 */
   //     memset(show_buf, 0, 32);
   //     snprintf(show_buf, 32, "Font Update Failed! %d", key);
-  //     spilcd_show_string(30, 50, 200, 16, 16, show_buf, RED);
+  //     spi//lcd_show_string(30, 50, 200, 16, 16, show_buf, RED);
   //     vTaskDelay(pdMS_TO_TICKS(200));
-  //     spilcd_fill(20, 50, 200 + 20, 90 + 16, WHITE);
+  //     spi//lcd_fill(20, 50, 200 + 20, 90 + 16, WHITE);
   //     vTaskDelay(pdMS_TO_TICKS(200));
   //   }
 
-  //   spilcd_show_string(30, 50, 200, 16, 16, "Font Update Success!   ", RED);
+  //   spi//lcd_show_string(30, 50, 200, 16, 16, "Font Update Success!   ", RED);
   //   vTaskDelay(pdMS_TO_TICKS(1000));
-  //   spilcd_clear(WHITE);
+  //   spi//lcd_clear(WHITE);
   // }
 
-  // lcd_show_init(&title_show, "TITLE", GB_TABLE, 10, 10, 300, 24, BLACK, 24,
+  // //lcd_show_init(&title_show, "TITLE", GB_TABLE, 10, 10, 300, 24, BLACK, 24,
   //               WHITE);
-  // lcd_show_init(&sub_title_show, "SUB_TITLE", GB_TABLE, 10, 35, 140, 16, BLUE,
+  // //lcd_show_init(&sub_title_show, "SUB_TITLE", GB_TABLE, 10, 35, 140, 16, BLUE,
   //               16, WHITE);
-  // lcd_show_init(&hw_show, "HW_TITLE", GB_TABLE, 170, 35, 150, 16, BLUE, 16,
+  // //lcd_show_init(&hw_show, "HW_TITLE", GB_TABLE, 170, 35, 150, 16, BLUE, 16,
   //               WHITE);
-  // lcd_show_init(&latency_title_show, "LATENCY", GB_TABLE, 10, 52, 300, 48, BLUE,
+  // //lcd_show_init(&latency_title_show, "LATENCY", GB_TABLE, 10, 52, 300, 48, BLUE,
   //               16, WHITE);
-  // lcd_show_init(&content_show, "CONTENT", GB_TABLE, 10, 110, 300, 130, RED, 16,
+  // //lcd_show_init(&content_show, "CONTENT", GB_TABLE, 10, 110, 300, 130, RED, 16,
   //               WHITE);
 
-  // lcd_show_text_string_append(&title_show, "ESP32-S3 开发板");
+  // //lcd_show_text_string_append(&title_show, "ESP32-S3 开发板");
 
   vTaskDelay(pdMS_TO_TICKS(2000));
 }
 
-static esp_err_t es8311_board_test(void)
+
+
+static void configure_io(void)
 {
-  // 读取Chip ID (寄存器地址 0x00)
-  uint8_t chip_id;
-  uint8_t ret = es8311_read_reg(0x00, &chip_id);
-  if (ret == ESP_OK)
-  {
-    ESP_LOGI(TAG, "ES8311 Chip ID: 0x%02x", chip_id);
-  }
-  else
-  {
-    ESP_LOGE(TAG, "Failed to read ES8311 Chip ID");
-  }
-  return ret;
+    gpio_reset_pin(GPIO_NUM_46);
+    /* Set the GPIO as a push/pull output */
+    gpio_set_direction(GPIO_NUM_46, GPIO_MODE_OUTPUT);
+
+    gpio_set_level(GPIO_NUM_46,1);
 }
+
+
+/* Import music file as buffer */
+//#if CONFIG_EXAMPLE_MODE_MUSIC
+//  extern const uint8_t music_pcm_start[] asm("_binary_canon_pcm_start");
+//  extern const uint8_t music_pcm_end[]   asm("_binary_canon_pcm_end");
+
+extern const uint8_t music_pcm_start[] asm("_binary_music_16b_2c_8000hz_mp3_start");
+extern const uint8_t music_pcm_end[]   asm("_binary_music_16b_2c_8000hz_mp3_end");
+//#endif
+
+
 void app_main(void)
 {
   esp_log_level_set("*", ESP_LOG_VERBOSE);
 
   board_dnesp32s3_init(); /* 硬件初始化 */
-  es8311_register_dump();
-  while (1){
-    vTaskDelay(1000);
-    ESP_LOGI(TAG, "ES8311 codec initialized successfully.");
-      es8311_register_dump();    /* ES8311测试 */
-  }
-  //  lcd_show_clear(&title_show);
-  //  lcd_show_text_string_append(&title_show, "WIFI链接 ...");
-  wifi_sta_init(); /* 链接WIFI */
+  es8311_register_dump(); /* ES8311测试_读一下寄存器*/  
+  configure_io();         /* 配置IO */
+  vTaskDelay(1000);
+  ESP_LOGI(TAG, "ES8311 codec initialized successfully.");
+  //  //lcd_show_clear(&title_show);
+  //  //lcd_show_text_string_append(&title_show, "WIFI链接 ...");
+  // wifi_sta_init(); /* 链接WIFI */
 
-  ESP_LOGI(TAG, "app_main ->");
-  ESP_LOGI(TAG, "test voice-chat %s ->", conversation_get_version());
-
-  //  lcd_show_clear(&title_show);
-  //  lcd_show_text_string_append(&title_show, "交互启动中 ...");
-  create_conversation(event_callback, NULL);
-
-  conv_ret_code_t conv_ret = conversation_connect(genInitParams());
-  ESP_LOGI(TAG, "conversation_connect done(%d).", conv_ret);
-  if (conv_ret != CONV_SUCCESS)
-  {
-    return;
-  }
+  // ESP_LOGI(TAG, "app_main ->");
+  // ESP_LOGI(TAG, "test voice-chat %s ->", conversation_get_version());
+  // //  //lcd_show_clear(&title_show);
+  // //  //lcd_show_text_string_append(&title_show, "交互启动中 ...");
+  // create_conversation(event_callback, NULL);
+  // conv_ret_code_t conv_ret = conversation_connect(genInitParams());
+  // ESP_LOGI(TAG, "conversation_connect done(%d).", conv_ret);
+  // if (conv_ret != CONV_SUCCESS)
+  // {
+  //   ESP_LOGI(TAG, "conversation_connect done(%d).", conv_ret);
+  //   return;
+  // }
 
   memset(&audio_ctrl, 0, sizeof(audio_ctrl));
   audio_ctrl.recorder_sr = default_recorder_sample_rate;
@@ -760,50 +763,104 @@ void app_main(void)
   audio_ctrl.enable_using_sdcard_cache = ENABLE_USING_SDCARD_CACHE;
   player_init(&audio_ctrl);
 
-  g_running = true;
-
-  /* 按键监控 */
-  TaskHandle_t key_task_handler;
-  xTaskCreate(key_task, "key_task_work", CONFIG_DEFAULT_CONV_STACK_SIZE,
-              &key_task_handler, 5, NULL);
-
-  /* MIC录音处理 */
-  TaskHandle_t rec_task_handler;
-  xTaskCreate(recorder_task, "recorder_task_work",
-              CONFIG_DEFAULT_CONV_STACK_SIZE, &rec_task_handler, 15, NULL);
-
-  ESP_LOGI(TAG, "Working ......");
-
-  //  lcd_show_clear(&title_show);
-  //  lcd_show_text_string_append(&title_show, "开始交互吧！");
-
-  /* forever */
-  while (g_running)
-  {
-    vTaskDelay(pdMS_TO_TICKS(100));
+  // while (1)
+  // {
+  //     vTaskDelay(1000);
+  //     ESP_LOGI(TAG, "1s_runing");
+  //     /* 测试PCM音频播放 */
+  //     size_t pcm_size = music_pcm_end - music_pcm_start;
+  //     ESP_LOGI(TAG, "开始播放PCM音频测试...");
+      
+  //     /* 开始播放 */
+  //     player_start();
+  //     player_insert_data(music_pcm_start, pcm_size);
+  //     player_drain();
+      
+  //     /* 等待播放完成 */
+  //     vTaskDelay(pdMS_TO_TICKS(5000));
+      
+  //     ESP_LOGI(TAG, "PCM音频播放测试完成");
+  //     vTaskDelay(pdMS_TO_TICKS(1000));
+  //   /* code */
+  // }
+/* 测试ES8311麦克风录音和播放 */
+  ESP_LOGI(TAG, "开始ES8311麦克风测试...");
+  
+  /* 初始化录音缓冲区 */
+  uint8_t *record_buffer = malloc(REC_RX_BUF_SIZE);
+  if (record_buffer == NULL) {
+    ESP_LOGE(TAG, "无法分配录音缓冲区内存");
+    return;
   }
 
-  conv_ret = conversation_disconnect();
-  if (conv_ret != CONV_SUCCESS)
-  {
-    ESP_LOGE(TAG, "conversation_disconnect failed(%d).", conv_ret);
+  /* 开始录音 */
+  ESP_LOGI(TAG, "开始录音，持续3秒...");
+  recorder_start();
+  
+  /* 录制3秒音频 */
+  player_start(); // 同时开启播放器实现实时回放
+  for(int i = 0; i < 100; i++) { // 3秒 = 150 * 20ms
+    int bytes_read = recorder_fetch_data(record_buffer, REC_RX_BUF_SIZE);
+    if (bytes_read > 0) {
+      ESP_LOGI(TAG, "录制了 %d 字节的音频数据", bytes_read);
+      player_insert_data(record_buffer, bytes_read); // 实时回放
+    }
+    vTaskDelay(pdMS_TO_TICKS(20));
   }
+  
+  /* 停止录音和播放 */
+  recorder_stop();
+  player_drain();
+  free(record_buffer);
+  
+  ESP_LOGI(TAG, "ES8311麦克风测试完成");
+  vTaskDelay(pdMS_TO_TICKS(1000));
 
-  /* 等待交互结束 */
-  while (g_event_type != CONV_EVENT_CONVERSATION_COMPLETED &&
-         g_event_type != CONV_EVENT_CONVERSATION_FAILED)
-  {
-    vTaskDelay(pdMS_TO_TICKS(10));
-  }
 
-  conv_ret = destroy_conversation();
-  if (conv_ret != CONV_SUCCESS)
-  {
-    ESP_LOGE(TAG, "destroy_conversation failed(%d).", conv_ret);
-  }
-  recorder_deinit();
-  player_deinit();
+  // g_running = true;
 
-  ESP_LOGI(TAG, "test voice-chat done.");
+  // /* 按键监控 */
+  // TaskHandle_t key_task_handler;
+  // xTaskCreate(key_task, "key_task_work", CONFIG_DEFAULT_CONV_STACK_SIZE,
+  //             &key_task_handler, 5, NULL);
+
+  // /* MIC录音处理 */
+  // TaskHandle_t rec_task_handler;
+  // xTaskCreate(recorder_task, "recorder_task_work",
+  //             CONFIG_DEFAULT_CONV_STACK_SIZE, &rec_task_handler, 15, NULL);
+
+  // ESP_LOGI(TAG, "Working ......");
+
+  // //  //lcd_show_clear(&title_show);
+  // //  //lcd_show_text_string_append(&title_show, "开始交互吧！");
+
+  // /* forever */
+  // while (g_running)
+  // {
+  //   vTaskDelay(pdMS_TO_TICKS(100));
+  // }
+
+  // conv_ret = conversation_disconnect();
+  // if (conv_ret != CONV_SUCCESS)
+  // {
+  //   ESP_LOGE(TAG, "conversation_disconnect failed(%d).", conv_ret);
+  // }
+
+  // /* 等待交互结束 */
+  // while (g_event_type != CONV_EVENT_CONVERSATION_COMPLETED &&
+  //        g_event_type != CONV_EVENT_CONVERSATION_FAILED)
+  // {
+  //   vTaskDelay(pdMS_TO_TICKS(10));
+  // }
+
+  // conv_ret = destroy_conversation();
+  // if (conv_ret != CONV_SUCCESS)
+  // {
+  //   ESP_LOGE(TAG, "destroy_conversation failed(%d).", conv_ret);
+  // }
+  // recorder_deinit();
+  // player_deinit();
+
+  // ESP_LOGI(TAG, "test voice-chat done.");
 
 }

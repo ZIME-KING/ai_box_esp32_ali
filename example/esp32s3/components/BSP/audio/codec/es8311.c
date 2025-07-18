@@ -163,9 +163,9 @@ esp_err_t es8311_write_reg(uint8_t reg_addr, uint8_t data)
 }
 esp_err_t es8311_read_reg(uint8_t reg_addr, uint8_t *reg_value)
 {
-    uint8_t reg_data = 0;
-    i2c_master_transmit_receive(es8311_handle, &reg_addr, 1, &reg_data, 1, -1);
-    return reg_data;
+    uint8_t ret = 0;
+    ret=i2c_master_transmit_receive(es8311_handle, &reg_addr, 1, reg_value, 1, -1);
+    return ret;
 }
 /*
  * look for the coefficient in coeff_div[] table
@@ -455,6 +455,24 @@ void es8311_register_dump()
     }
 }
 
+
+// esp_err_t myiic_init(void)
+// {
+//     i2c_master_bus_config_t i2c_bus_config = {
+//         .clk_source                     = I2C_CLK_SRC_DEFAULT,  /* 时钟源 */
+//         .i2c_port                       = IIC_NUM_PORT,         /* I2C端口 */
+//         .scl_io_num                     = IIC_SCL_GPIO_PIN,     /* SCL管脚 */
+//         .sda_io_num                     = IIC_SDA_GPIO_PIN,     /* SDA管脚 */
+//         .glitch_ignore_cnt              = 7,                    /* 故障周期 */
+//         .flags.enable_internal_pullup   = true,                 /* 内部上拉 */
+//     };
+//     /* 新建I2C总线 */
+//     ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_config, &bus_handle));
+
+//     return ESP_OK;
+// }
+
+
 uint8_t user_es8311_init(void) {
     esp_err_t ret = ESP_OK;
   /* I2C总线已在board_dnesp32s3_init()中初始化 */
@@ -465,26 +483,26 @@ uint8_t user_es8311_init(void) {
   i2c_device_config_t es8311_i2c_dev_conf = {
       .dev_addr_length = I2C_ADDR_BIT_LEN_7, /* 从机地址长度 */
       .scl_speed_hz = IIC_SPEED_CLK,         /* 传输速率 */
-      .device_address = ES8311_ADDRRES_0,         /* 从机7位的地址 */
+      .device_address = 0x18,         /* 从机7位的地址 */
   };
   /* I2C总线上添加ES8388设备 */
-  ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &es8311_i2c_dev_conf,
-                                            &es8311_handle));
+  ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &es8311_i2c_dev_conf, &es8311_handle));
+  /* 等待i2c总线空闲 */
+  ESP_ERROR_CHECK(i2c_master_bus_wait_all_done(bus_handle, 1000));
 
-//   ESP_ERROR_CHECK(i2c_master_bus_wait_all_done(bus_handle, 1000));
+    es8311_clock_config_t clk_cfg = {
+      .mclk_inverted = false,
+      .sclk_inverted = false,
+      .mclk_from_mclk_pin = true,
+      .mclk_frequency = 16000*256, // i2s 配置16K*256为mclk主时钟
+      .sample_frequency = 16000   // 16KHz 采样率
+    };
 
-//     es8311_clock_config_t clk_cfg = {
-//       .mclk_from_mclk_pin = true,
-//       .mclk_frequency = 16000000, // 16MHz
-//       .sample_frequency = 16000,  // 16KHz
-//       .mclk_inverted = false,
-//       .sclk_inverted = false};
-
-//   ret |= es8311_init(&clk_cfg, ES8311_RESOLUTION_16, ES8311_RESOLUTION_16);
-//   ret |= es8311_voice_volume_set(50, NULL); // Set volume to 50%
-//   ret |= es8311_microphone_config(false);   // Analog microphone
-//   ret |= es8311_microphone_gain_set(ES8311_MIC_GAIN_30DB);
-
+  ret |= es8311_init(&clk_cfg, ES8311_RESOLUTION_16, ES8311_RESOLUTION_16);
+  ret |= es8311_voice_volume_set(95, NULL);                 // Set volume to 50%
+  ret |= es8311_microphone_config(true);                    // Analog microphone
+  ret |= es8311_microphone_gain_set(ES8311_MIC_GAIN_MAX);
+  ret |= es8311_sample_frequency_config(16000*256, 256);
   return ret;
 }
 

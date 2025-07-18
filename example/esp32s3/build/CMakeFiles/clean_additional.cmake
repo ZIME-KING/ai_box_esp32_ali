@@ -16,6 +16,7 @@ if("${CONFIG}" STREQUAL "" OR "${CONFIG}" STREQUAL "")
   "flasher_args.json"
   "ldgen_libraries"
   "ldgen_libraries.in"
+  "music-16b-2c-8000hz.mp3.S"
   "project_elf_src_esp32s3.c"
   "voice_chat.bin"
   "voice_chat.map"

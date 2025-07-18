@@ -1,4 +1,4 @@
-# Install script for directory: D:/v5.4.2/esp-idf/components/esp_hw_support
+# Install script for directory: D:/v5.4/v5.4/esp-idf/components/esp_hw_support
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

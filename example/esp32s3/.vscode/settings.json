@@ -1,5 +1,5 @@
 {
-    "idf.espIdfPathWin": "d:\\v5.4.2\\esp-idf",
+    "idf.espIdfPathWin": "d:\\v5.4\\v5.4\\esp-idf",
     "idf.toolsPathWin": "D:\\Espressif",
     "idf.pythonInstallPath": "D:\\Espressif\\tools\\idf-python\\3.11.2\\python.exe",
     "files.associations": {
@@ -37,10 +37,11 @@
         "board_config.h": "c",
         "cstring": "c",
         "fonts.h": "c",
-        "spi_flash_mmap.h": "c"
+        "spi_flash_mmap.h": "c",
+        "cstdint": "c"
     },
     "files.encoding": "utf8",
     "files.autoGuessEncoding": false,
-    "idf.portWin": "COM112",
+    "idf.portWin": "COM111",
     "idf.flashType": "UART"
 }

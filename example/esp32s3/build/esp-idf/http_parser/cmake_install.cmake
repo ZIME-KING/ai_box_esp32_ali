@@ -1,4 +1,4 @@
-# Install script for directory: D:/v5.4.2/esp-idf/components/http_parser
+# Install script for directory: D:/v5.4/v5.4/esp-idf/components/http_parser
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

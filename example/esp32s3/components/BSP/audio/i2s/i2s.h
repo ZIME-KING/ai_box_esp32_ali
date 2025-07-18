@@ -40,11 +40,11 @@
 
 #ifdef ES8311
 #define I2S_NUM (I2S_NUM_0)      /* I2S port */
-#define I2S_BCK_IO (GPIO_NUM_46) /* ES8388_SCLK */
-#define I2S_WS_IO (GPIO_NUM_9)   /* ES8388_LRCK */
-#define I2S_DO_IO (GPIO_NUM_10)  /* ES8388_SDIN */
-#define I2S_DI_IO (GPIO_NUM_14)  /* ES8388_SDOUT */
-#define I2S_MCK_IO (GPIO_NUM_3)  /* ES8388_MCLK */
+#define I2S_BCK_IO (GPIO_NUM_9) /* ES8311_SCLK */
+#define I2S_WS_IO (GPIO_NUM_45)   /* ES8311_LRCK */
+#define I2S_DO_IO (GPIO_NUM_8)  /* ES8311_SDIN */
+#define I2S_DI_IO (GPIO_NUM_10)  /* ES8311_SDOUT */
+#define I2S_MCK_IO (GPIO_NUM_16)  /* ES8311_MCLK */
 #endif
 
 

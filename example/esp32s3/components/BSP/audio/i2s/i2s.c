@@ -102,17 +102,16 @@ esp_err_t myi2s_init(int sample_rate) {
               /*
               声道配置,可用I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT,
                   I2S_SLOT_MODE_STEREO)宏函数辅助配置(支持16位宽采样数据) */
-              .data_bit_width =
-                  I2S_DATA_BIT_WIDTH_16BIT, /* 声道支持16位宽的采样数据 */
-              .slot_bit_width = I2S_SLOT_BIT_WIDTH_AUTO, /* 通道位宽 */
-              .slot_mode = I2S_SLOT_MODE_MONO,           /* 单通道 */
-              .slot_mask = I2S_STD_SLOT_LEFT,            /* 启用通道 */
-              .ws_width = I2S_DATA_BIT_WIDTH_16BIT,      /* WS信号位宽 */
-              .ws_pol = false,                           /* WS信号极性 */
-              .bit_shift = true,     /* 位移位(Philips模式下配置) */
-              .left_align = true,    /* 左对齐 */
-              .big_endian = false,   /* 小端模式 */
-              .bit_order_lsb = false /* MSB */
+              .data_bit_width = I2S_DATA_BIT_WIDTH_16BIT, /* 声道支持16位宽的采样数据 */
+              .slot_bit_width = I2S_SLOT_BIT_WIDTH_AUTO,  /* 通道位宽 */
+              .slot_mode = I2S_SLOT_MODE_MONO,            /* 单通道 */
+              .slot_mask = I2S_STD_SLOT_LEFT,             /* 启用通道 */
+              .ws_width = I2S_DATA_BIT_WIDTH_16BIT,       /* WS信号位宽 */
+              .ws_pol = false,                            /* WS信号极性 */
+              .bit_shift = true,                          /* 位移位(Philips模式下配置) */
+              .left_align = true,                         /* 左对齐 */
+              .big_endian = false,                        /* 小端模式 */
+              .bit_order_lsb = false                      /* MSB */
           },
       //   .slot_cfg =
       //   I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT,
@@ -146,8 +145,7 @@ esp_err_t myi2s_init(int sample_rate) {
               /*
               声道配置,可用I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT,
                   I2S_SLOT_MODE_STEREO)宏函数辅助配置(支持16位宽采样数据) */
-              .data_bit_width =
-                  I2S_DATA_BIT_WIDTH_16BIT, /* 声道支持16位宽的采样数据 */
+              .data_bit_width = I2S_DATA_BIT_WIDTH_16BIT, /* 声道支持16位宽的采样数据 */
               .slot_bit_width = I2S_SLOT_BIT_WIDTH_AUTO, /* 通道位宽 */
               .slot_mode = I2S_SLOT_MODE_MONO,           /* 单通道 */
               .slot_mask = I2S_STD_SLOT_LEFT,            /* 启用通道 */
