@@ -125,6 +125,21 @@
 #define CONFIG_DEFAULT_PLAYER_RINGBUF_SIZE 0
 #endif
 
+// /******** net config 配置文件 ********/
+// #ifndef CONFIG_DEFAULT_APIKEY
+// #define CONFIG_DEFAULT_APIKEY "sk-c9ed124103004ed6bdee410338e38bf5"
+// #endif
+// #ifndef CONFIG_DEFAULT_URL
+// #define CONFIG_DEFAULT_URL "wss://dashscope.aliyuncs.com/api-ws/v1/inference"
+// #endif
+// #ifndef CONFIG_DEFAULT_APP_ID
+// #define CONFIG_DEFAULT_APP_ID "c069cf871dc94111b25aa4ddcf1a8b5a"
+// #endif
+// #ifndef CONFIG_DEFAULT_WORKSPACE_ID
+// #define CONFIG_DEFAULT_WORKSPACE_ID "llm-mx27m9e7lb6hryzr"
+// #endif
+
+
 /******** net config 配置文件 ********/
 #ifndef CONFIG_DEFAULT_APIKEY
 #define CONFIG_DEFAULT_APIKEY "sk-85d1601205d246a2b541c794d3dd3561"
@@ -138,6 +153,8 @@
 #ifndef CONFIG_DEFAULT_WORKSPACE_ID
 #define CONFIG_DEFAULT_WORKSPACE_ID "llm-4wlqoa100jpykcdz"
 #endif
+
+
 
 /******** model config 配置文件 ********/
 #ifndef CONFIG_DEFAULT_PROTOCOL_TASK_GROUP

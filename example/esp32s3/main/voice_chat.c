@@ -735,20 +735,20 @@ void app_main(void)
   ESP_LOGI(TAG, "ES8311 codec initialized successfully.");
   //  //lcd_show_clear(&title_show);
   //  //lcd_show_text_string_append(&title_show, "WIFI链接 ...");
-  // wifi_sta_init(); /* 链接WIFI */
+  wifi_sta_init(); /* 链接WIFI */
 
-  // ESP_LOGI(TAG, "app_main ->");
-  // ESP_LOGI(TAG, "test voice-chat %s ->", conversation_get_version());
-  // //  //lcd_show_clear(&title_show);
-  // //  //lcd_show_text_string_append(&title_show, "交互启动中 ...");
-  // create_conversation(event_callback, NULL);
-  // conv_ret_code_t conv_ret = conversation_connect(genInitParams());
-  // ESP_LOGI(TAG, "conversation_connect done(%d).", conv_ret);
-  // if (conv_ret != CONV_SUCCESS)
-  // {
-  //   ESP_LOGI(TAG, "conversation_connect done(%d).", conv_ret);
-  //   return;
-  // }
+  ESP_LOGI(TAG, "app_main ->");
+  ESP_LOGI(TAG, "test voice-chat %s ->", conversation_get_version());
+  //  //lcd_show_clear(&title_show);
+  //  //lcd_show_text_string_append(&title_show, "交互启动中 ...");
+  create_conversation(event_callback, NULL);
+  conv_ret_code_t conv_ret = conversation_connect(genInitParams());
+  ESP_LOGI(TAG, "conversation_connect done(%d).", conv_ret);
+  if (conv_ret != CONV_SUCCESS)
+  {
+    ESP_LOGI(TAG, "conversation_connect done(%d).", conv_ret);
+    return;
+  }
 
   memset(&audio_ctrl, 0, sizeof(audio_ctrl));
   audio_ctrl.recorder_sr = default_recorder_sample_rate;
@@ -783,84 +783,84 @@ void app_main(void)
   //     vTaskDelay(pdMS_TO_TICKS(1000));
   //   /* code */
   // }
-/* 测试ES8311麦克风录音和播放 */
-  ESP_LOGI(TAG, "开始ES8311麦克风测试...");
+// /* 测试ES8311麦克风录音和播放 */
+//   ESP_LOGI(TAG, "开始ES8311麦克风测试...");
   
-  /* 初始化录音缓冲区 */
-  uint8_t *record_buffer = malloc(REC_RX_BUF_SIZE);
-  if (record_buffer == NULL) {
-    ESP_LOGE(TAG, "无法分配录音缓冲区内存");
-    return;
+//   /* 初始化录音缓冲区 */
+//   uint8_t *record_buffer = malloc(REC_RX_BUF_SIZE);
+//   if (record_buffer == NULL) {
+//     ESP_LOGE(TAG, "无法分配录音缓冲区内存");
+//     return;
+//   }
+
+//   /* 开始录音 */
+//   ESP_LOGI(TAG, "开始录音，持续3秒...");
+//   recorder_start();
+  
+//   /* 录制3秒音频 */
+//   player_start(); // 同时开启播放器实现实时回放
+//   for(int i = 0; i < 100; i++) { // 3秒 = 150 * 20ms
+//     int bytes_read = recorder_fetch_data(record_buffer, REC_RX_BUF_SIZE);
+//     if (bytes_read > 0) {
+//       ESP_LOGI(TAG, "录制了 %d 字节的音频数据", bytes_read);
+//       player_insert_data(record_buffer, bytes_read); // 实时回放
+//     }
+//     vTaskDelay(pdMS_TO_TICKS(20));
+//   }
+  
+//   /* 停止录音和播放 */
+//   recorder_stop();
+//   player_drain();
+//   free(record_buffer);
+  
+//   ESP_LOGI(TAG, "ES8311麦克风测试完成");
+//   vTaskDelay(pdMS_TO_TICKS(1000));
+
+
+  g_running = true;
+
+  /* 按键监控 */
+  TaskHandle_t key_task_handler;
+  xTaskCreate(key_task, "key_task_work", CONFIG_DEFAULT_CONV_STACK_SIZE,
+              &key_task_handler, 5, NULL);
+
+  /* MIC录音处理 */
+  TaskHandle_t rec_task_handler;
+  xTaskCreate(recorder_task, "recorder_task_work",
+              CONFIG_DEFAULT_CONV_STACK_SIZE, &rec_task_handler, 15, NULL);
+
+  ESP_LOGI(TAG, "Working ......");
+
+  //  //lcd_show_clear(&title_show);
+  //  //lcd_show_text_string_append(&title_show, "开始交互吧！");
+
+  /* forever */
+  while (g_running)
+  {
+    vTaskDelay(pdMS_TO_TICKS(100));
   }
 
-  /* 开始录音 */
-  ESP_LOGI(TAG, "开始录音，持续3秒...");
-  recorder_start();
-  
-  /* 录制3秒音频 */
-  player_start(); // 同时开启播放器实现实时回放
-  for(int i = 0; i < 100; i++) { // 3秒 = 150 * 20ms
-    int bytes_read = recorder_fetch_data(record_buffer, REC_RX_BUF_SIZE);
-    if (bytes_read > 0) {
-      ESP_LOGI(TAG, "录制了 %d 字节的音频数据", bytes_read);
-      player_insert_data(record_buffer, bytes_read); // 实时回放
-    }
-    vTaskDelay(pdMS_TO_TICKS(20));
+  conv_ret = conversation_disconnect();
+  if (conv_ret != CONV_SUCCESS)
+  {
+    ESP_LOGE(TAG, "conversation_disconnect failed(%d).", conv_ret);
   }
-  
-  /* 停止录音和播放 */
-  recorder_stop();
-  player_drain();
-  free(record_buffer);
-  
-  ESP_LOGI(TAG, "ES8311麦克风测试完成");
-  vTaskDelay(pdMS_TO_TICKS(1000));
 
+  /* 等待交互结束 */
+  while (g_event_type != CONV_EVENT_CONVERSATION_COMPLETED &&
+         g_event_type != CONV_EVENT_CONVERSATION_FAILED)
+  {
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
 
-  // g_running = true;
+  conv_ret = destroy_conversation();
+  if (conv_ret != CONV_SUCCESS)
+  {
+    ESP_LOGE(TAG, "destroy_conversation failed(%d).", conv_ret);
+  }
+  recorder_deinit();
+  player_deinit();
 
-  // /* 按键监控 */
-  // TaskHandle_t key_task_handler;
-  // xTaskCreate(key_task, "key_task_work", CONFIG_DEFAULT_CONV_STACK_SIZE,
-  //             &key_task_handler, 5, NULL);
-
-  // /* MIC录音处理 */
-  // TaskHandle_t rec_task_handler;
-  // xTaskCreate(recorder_task, "recorder_task_work",
-  //             CONFIG_DEFAULT_CONV_STACK_SIZE, &rec_task_handler, 15, NULL);
-
-  // ESP_LOGI(TAG, "Working ......");
-
-  // //  //lcd_show_clear(&title_show);
-  // //  //lcd_show_text_string_append(&title_show, "开始交互吧！");
-
-  // /* forever */
-  // while (g_running)
-  // {
-  //   vTaskDelay(pdMS_TO_TICKS(100));
-  // }
-
-  // conv_ret = conversation_disconnect();
-  // if (conv_ret != CONV_SUCCESS)
-  // {
-  //   ESP_LOGE(TAG, "conversation_disconnect failed(%d).", conv_ret);
-  // }
-
-  // /* 等待交互结束 */
-  // while (g_event_type != CONV_EVENT_CONVERSATION_COMPLETED &&
-  //        g_event_type != CONV_EVENT_CONVERSATION_FAILED)
-  // {
-  //   vTaskDelay(pdMS_TO_TICKS(10));
-  // }
-
-  // conv_ret = destroy_conversation();
-  // if (conv_ret != CONV_SUCCESS)
-  // {
-  //   ESP_LOGE(TAG, "destroy_conversation failed(%d).", conv_ret);
-  // }
-  // recorder_deinit();
-  // player_deinit();
-
-  // ESP_LOGI(TAG, "test voice-chat done.");
+  ESP_LOGI(TAG, "test voice-chat done.");
 
 }

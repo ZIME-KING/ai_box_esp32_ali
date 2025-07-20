@@ -499,10 +499,13 @@ uint8_t user_es8311_init(void) {
     };
 
   ret |= es8311_init(&clk_cfg, ES8311_RESOLUTION_16, ES8311_RESOLUTION_16);
-  ret |= es8311_voice_volume_set(95, NULL);                 // Set volume to 50%
-  ret |= es8311_microphone_config(true);                    // Analog microphone
-  ret |= es8311_microphone_gain_set(ES8311_MIC_GAIN_MAX);
-  ret |= es8311_sample_frequency_config(16000*256, 256);
+  ret |= es8311_voice_volume_set(80, NULL);                 // Set volume to 50%
+  ret |= es8311_microphone_config(false);                    // Analog microphone
+  ret |= es8311_microphone_gain_set(ES8311_MIC_GAIN_42DB);
+
+  //ret |= es8311_sample_frequency_config(16000*256, 256);
+  //es8311_write_reg(ES8311_GPIO_REG44, 0x88); // Set GPIO44 as output, default is input
+
   return ret;
 }
 

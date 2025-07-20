@@ -1,7 +1,7 @@
 {
     "version":            "1.2",
     "project_name":       "voice_chat",
-    "project_version":    "ed99cf1-dirty",
+    "project_version":    "d22f775-dirty",
     "project_path":       "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3",
     "idf_path":           "D:/v5.4/v5.4/esp-idf",
     "build_dir":          "C:/Users/king/Desktop/AI_BOX/ai_box_esp32_ali/example/esp32s3/build",
