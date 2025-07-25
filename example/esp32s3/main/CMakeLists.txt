@@ -4,6 +4,9 @@ set(example_srcs
     "audio/audio_controller.c"
     "cache/buffer_pool.c"
     "show/lcd_show.c"
+    "display/lcd_display.cc"
+
+
     )
 set(example_inc
     "."
@@ -11,6 +14,8 @@ set(example_inc
     "audio"
     "cache"
     "show"
+    "generated"
+    "display"
     )
 idf_component_register(SRCS ${example_srcs}
                        INCLUDE_DIRS ${example_inc}

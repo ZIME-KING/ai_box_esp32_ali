@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "esp-idf/coredump_upload_service",
+		"source" : "D:/Espressif/esp-adf/components/coredump_upload_service"
+	}
+}

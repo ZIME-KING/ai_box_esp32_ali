@@ -1,4 +1,14 @@
 dependencies:
+  78/xiaozhi-fonts:
+    component_hash: a41751f0781dec68850ff39e9c0e5fd5ca24e6b8853b2cad77bd5e98ed8f8acc
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.3'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.3.2
   espressif/cmake_utilities:
     component_hash: 351350613ceafba240b761b4ea991e0f231ac7a9f59a9ee901f751bddc0bb18f
     dependencies:
@@ -19,6 +29,20 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 1.6.0
+  espressif/esp_lcd_gc9a01:
+    component_hash: 018d015a5a6f9e04aed401d58eca66a1dbd603388a3ccf66666a08d8e12551a5
+    dependencies:
+    - name: espressif/cmake_utilities
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.*
+    - name: idf
+      require: private
+      version: '>=4.4'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 2.0.2
   espressif/esp_lcd_ili9341:
     component_hash: 31f1b793aa2110dd2ae071c21ccbff0a4eb20d9a4ee40b6294c0dc0ad9552c4e
     dependencies:
@@ -33,6 +57,20 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 1.2.0
+  espressif/esp_lvgl_port:
+    component_hash: e720c95cf0667554a204591bb5fade4655fb2990465557041200fa44b5bc7556
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.4'
+    - name: lvgl/lvgl
+      registry_url: https://components.espressif.com
+      require: public
+      version: '>=8,<10'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 2.6.0
   espressif/esp_websocket_client:
     component_hash: f77326f0e1c38da4e9c97e17c5d649b0dd13027f2645e720e48db269638fd622
     dependencies:
@@ -77,14 +115,25 @@ dependencies:
     source:
       type: idf
     version: 5.4.2
+  lvgl/lvgl:
+    component_hash: b702d642e03e95928046d5c6726558e6444e112420c77efa5fdb6650b0a13c5d
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 9.3.0
 direct_dependencies:
+- 78/xiaozhi-fonts
 - espressif/esp-dsp
+- espressif/esp_lcd_gc9a01
 - espressif/esp_lcd_ili9341
+- espressif/esp_lvgl_port
 - espressif/esp_websocket_client
 - espressif/jsmn
 - espressif/nghttp
 - espressif/zlib
 - idf
-manifest_hash: 357e2cb16bce04836a1f9d7bc3f309597c73e8a391dc9c59a3a7a7efc8b51242
+- lvgl/lvgl
+manifest_hash: cb9f340c0108b05085dc3d4844b407cc862290ead4a0053418bf3b2eab52d98c
 target: esp32s3
 version: 2.0.0
