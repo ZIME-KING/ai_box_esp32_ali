@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "lvgl.h": "c",
+        "gui_guider.h": "c"
+    }
+}

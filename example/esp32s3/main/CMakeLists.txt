@@ -5,7 +5,7 @@ set(example_srcs
     "cache/buffer_pool.c"
     "show/lcd_show.c"
     "display/lcd_display.cc"
-
+    "user_display.c"
 
     )
 set(example_inc

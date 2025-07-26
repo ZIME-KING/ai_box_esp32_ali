@@ -38257,6 +38257,58 @@
                 "children": [
                     {
                         "children": [],
+                        "depends_on": null,
+                        "help": null,
+                        "id": "ESP_LCD_TOUCH_MAX_POINTS",
+                        "name": "ESP_LCD_TOUCH_MAX_POINTS",
+                        "range": [
+                            1,
+                            10
+                        ],
+                        "title": "Maximum count of the touch points",
+                        "type": "int"
+                    },
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": null,
+                        "id": "ESP_LCD_TOUCH_MAX_BUTTONS",
+                        "name": "ESP_LCD_TOUCH_MAX_BUTTONS",
+                        "range": [
+                            0,
+                            10
+                        ],
+                        "title": "Maximum count of the touch buttons supported",
+                        "type": "int"
+                    }
+                ],
+                "depends_on": null,
+                "id": "component-config-esp-lcd-touch",
+                "title": "ESP LCD TOUCH",
+                "type": "menu"
+            },
+            {
+                "children": [
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": "For some CST816 series chips, reading ID may cause initialization failure.",
+                        "id": "ESP_LCD_TOUCH_CST816S_DISABLE_READ_ID",
+                        "name": "ESP_LCD_TOUCH_CST816S_DISABLE_READ_ID",
+                        "range": null,
+                        "title": "Disable reading ID during initialization",
+                        "type": "bool"
+                    }
+                ],
+                "depends_on": null,
+                "id": "component-config-esp-lcd-touch-cst816s",
+                "title": "ESP LCD TOUCH - CST816S",
+                "type": "menu"
+            },
+            {
+                "children": [
+                    {
+                        "children": [],
                         "depends_on": "SOC_PPA_SUPPORTED",
                         "help": "Enables using PPA for screen rotation.",
                         "id": "LVGL_PORT_ENABLE_PPA",

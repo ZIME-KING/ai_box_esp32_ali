@@ -37,6 +37,9 @@
 
 #include "es8311.h"
 
+#include "user_display.h"
+
+
 // #define KEY_NONE    0
 // #define KEY0_PRES   BOOT_PRES
 // #define KEY0_RELES  2
@@ -219,31 +222,31 @@ void event_callback(conv_event_t *event, void *param)
         cJSON_Delete(response_json);
       }
     }
-    //连接成功
-    else if (event->msg_type == CONV_EVENT_CONVERSATION_CONNECTED)
-    {
-      ESP_LOGI(TAG, "Connection established successfully, sending text message...");
+    // //连接成功
+    // else if (event->msg_type == CONV_EVENT_CONVERSATION_CONNECTED)
+    // {
+    //   ESP_LOGI(TAG, "Connection established successfully, sending text message...");
       
-      // 创建文本消息的JSON参数
-      cJSON *text_msg = cJSON_CreateObject();
-      cJSON_AddStringToObject(text_msg, "text", "进入智能体应用");
+    //   // 创建文本消息的JSON参数
+    //   cJSON *text_msg = cJSON_CreateObject();
+    //   cJSON_AddStringToObject(text_msg, "text", "进入智能体应用");
       
-      char *text_params = cJSON_Print(text_msg);
-      cJSON_Delete(text_msg);
+    //   char *text_params = cJSON_Print(text_msg);
+    //   cJSON_Delete(text_msg);
       
-      // 发送文本消息
-      conv_ret_code_t ret = conversation_send_response_data(text_params);
-      if (ret == CONV_SUCCESS)
-      {
-        ESP_LOGI(TAG, "Text message sent successfully: %s", text_params);
-      }
-      else
-      {
-        ESP_LOGE(TAG, "Failed to send text message, error code: %d", ret);
-      }
+    //   // 发送文本消息
+    //   conv_ret_code_t ret = conversation_send_response_data(text_params);
+    //   if (ret == CONV_SUCCESS)
+    //   {
+    //     ESP_LOGI(TAG, "Text message sent successfully: %s", text_params);
+    //   }
+    //   else
+    //   {
+    //     ESP_LOGE(TAG, "Failed to send text message, error code: %d", ret);
+    //   }
       
-      free(text_params);
-    }
+    //   free(text_params);
+    // }
     else if (event->msg_type == CONV_EVENT_INTERRUPT_ACCEPTED)
     {
       player_stop();
@@ -604,9 +607,7 @@ void key_task(void *arg)
 const char *genInitParams()
 {
   cJSON *root = cJSON_CreateObject();
-
-#include "usr_access.h"
-
+  #include "usr_access.h"
   cJSON_AddNumberToObject(root, "chain_mode", CONFIG_DEFAULT_CONV_CHAIN_MODE);
   cJSON_AddNumberToObject(root, "ws_protocol_ver",
                           CONFIG_DEFAULT_WS_PROTOCOL_VER);
@@ -658,71 +659,12 @@ void board_dnesp32s3_init()
     ESP_ERROR_CHECK(nvs_flash_erase());
     ESP_ERROR_CHECK(nvs_flash_init());
   }
-
   // my_spi_init(); /* SPI初始化 */
   key_init(); /* KEY初始化 */
   myiic_init();  /* MYIIC初始化 */
   user_es8311_init(); /* ES8311初始化 */
 
-  // xl9555_init(); /* XL9555初始化 */
-  // spi//lcd_init(); /* SPILCD初始化 */
-
-  // /* ES8388初始化 */
-  // while (es8388_init()) {
-  //   //spi//lcd_show_string(30, 110, 200, 16, 16, "ES8388 Error", RED);
-  //   vTaskDelay(pdMS_TO_TICKS(200));
-  //   //spi//lcd_fill(30, 110, 239, 126, WHITE);
-  //   vTaskDelay(pdMS_TO_TICKS(200));
-  // }
-
-  //   xl9555_pin_write(SPK_EN_IO, 0); /* 打开喇叭 */
-
-  //   /* 检测不到SD卡 */
-  //   while (sd_spi_init()) {
-  //  //   spi//lcd_show_string(30, 110, 200, 16, 16, "SD Card Error!", RED);
-  //     vTaskDelay(pdMS_TO_TICKS(500));
-  // //    spi//lcd_show_string(30, 130, 200, 16, 16, "Please Check! ", RED);
-  //     vTaskDelay(pdMS_TO_TICKS(500));
-  //   }
-
   sys_ret = exfuns_init(); /* 为fatfs相关变量申请内存 */
-
-  // uint8_t key = 0;
-  // char show_buf[32];
-  // while (fonts_init()) {
-  //   /* 检查字库 */
-  //   spi//lcd_clear(WHITE);
-  //   spi//lcd_show_string(30, 30, 200, 16, 16, "ESP32-S3", RED);
-
-  //   key = fonts_update_font(30, 50, 16, (uint8_t*)"0:", RED); /* 更新字库 */
-
-  //   while (key) {
-  //     /* 更新失败 */
-  //     memset(show_buf, 0, 32);
-  //     snprintf(show_buf, 32, "Font Update Failed! %d", key);
-  //     spi//lcd_show_string(30, 50, 200, 16, 16, show_buf, RED);
-  //     vTaskDelay(pdMS_TO_TICKS(200));
-  //     spi//lcd_fill(20, 50, 200 + 20, 90 + 16, WHITE);
-  //     vTaskDelay(pdMS_TO_TICKS(200));
-  //   }
-
-  //   spi//lcd_show_string(30, 50, 200, 16, 16, "Font Update Success!   ", RED);
-  //   vTaskDelay(pdMS_TO_TICKS(1000));
-  //   spi//lcd_clear(WHITE);
-  // }
-
-  // //lcd_show_init(&title_show, "TITLE", GB_TABLE, 10, 10, 300, 24, BLACK, 24,
-  //               WHITE);
-  // //lcd_show_init(&sub_title_show, "SUB_TITLE", GB_TABLE, 10, 35, 140, 16, BLUE,
-  //               16, WHITE);
-  // //lcd_show_init(&hw_show, "HW_TITLE", GB_TABLE, 170, 35, 150, 16, BLUE, 16,
-  //               WHITE);
-  // //lcd_show_init(&latency_title_show, "LATENCY", GB_TABLE, 10, 52, 300, 48, BLUE,
-  //               16, WHITE);
-  // //lcd_show_init(&content_show, "CONTENT", GB_TABLE, 10, 110, 300, 130, RED, 16,
-  //               WHITE);
-
-  // //lcd_show_text_string_append(&title_show, "ESP32-S3 开发板");
 
   vTaskDelay(pdMS_TO_TICKS(2000));
 }
@@ -746,161 +688,148 @@ static void configure_io(void)
 
 extern const uint8_t music_pcm_start[] asm("_binary_music_16b_2c_8000hz_mp3_start");
 extern const uint8_t music_pcm_end[]   asm("_binary_music_16b_2c_8000hz_mp3_end");
-//#endif
+// //#endif
 
-#include <lvgl.h>
+#include "lvgl.h"
 #include "gui_guider.h"
 #include "events_init.h"   //lvgl事件
 
-#define EXAMPLE_LVGL_TICK_PERIOD_MS 2
-
-/*Change to your screen resolution*/
-static const uint16_t screenWidth = 240;
-static const uint16_t screenHeight = 240;
-
-static lv_disp_draw_buf_t draw_buf;
-static lv_color_t buf[screenWidth * screenHeight];
-
-lv_ui guider_ui;
+ lv_ui guider_ui;
 
 
-static void lvgl_disp_flush_cb(lv_display_t *display, const lv_area_t *area, lv_color16_t *px_map)
-{
-    ltdc_draw_lvgl(area->x1, area->y1, area->x2 + 1, area->y2 + 1, px_map);
-    lv_disp_flush_ready(display);
-}
+// static void lvgl_disp_flush_cb(lv_display_t *display, const lv_area_t *area, lv_color16_t *px_map)
+// {
+//     ltdc_draw_lvgl(area->x1, area->y1, area->x2 + 1, area->y2 + 1, px_map);
+//     lv_disp_flush_ready(display);
+// }
  
-static void increase_lvgl_tick(void *arg)
-{
-    lv_tick_inc(10);
-}
+// static void increase_lvgl_tick(void *arg)
+// {
+//     lv_tick_inc(10);
+// }
 
 
-void setup()
-{
-  lv_init();
-   /* Example for 1) */
-   static lv_disp_draw_buf_t draw_buf;
+// void setup()
+// {
+//   lv_init();
+//    /* Example for 1) */
+//    static lv_disp_draw_buf_t draw_buf;
    
-   lv_color_t *buf1 = heap_caps_malloc(DISP_BUF_SIZE * 2, MALLOC_CAP_DMA);
-   lv_color_t *buf2 = heap_caps_malloc(DISP_BUF_SIZE * 2, MALLOC_CAP_DMA);
+//    lv_color_t *buf1 = heap_caps_malloc(DISP_BUF_SIZE * 2, MALLOC_CAP_DMA);
+//    lv_color_t *buf2 = heap_caps_malloc(DISP_BUF_SIZE * 2, MALLOC_CAP_DMA);
 
-   lv_disp_draw_buf_init(&draw_buf, buf1, buf2, DLV_HOR_RES_MAX * DLV_VER_RES_MAX); /*Initialize the display buffer*/
+//    lv_disp_draw_buf_init(&draw_buf, buf1, buf2, DLV_HOR_RES_MAX * DLV_VER_RES_MAX); /*Initialize the display buffer*/
 
-   static lv_disp_drv_t disp_drv;         /*A variable to hold the drivers. Must be static or global.*/
-   lv_disp_drv_init(&disp_drv);           /*Basic initialization*/
-   disp_drv.draw_buf = &draw_buf;         /*Set an initialized buffer*/
-   disp_drv.flush_cb = disp_driver_flush; /*Set a flush callback to draw to the display*/
-   disp_drv.hor_res = 320;                /*Set the horizontal resolution in pixels*/
-   disp_drv.ver_res = 240;                /*Set the vertical resolution in pixels*/
-   lv_disp_drv_register(&disp_drv);       /*Register the driver and save the created display objects*/
-   /*触摸屏输入接口配置*/
-	lv_indev_drv_t indev_drv;
-	lv_indev_drv_init(&indev_drv);
-	indev_drv.read_cb = touch_driver_read;
-	indev_drv.type = LV_INDEV_TYPE_POINTER;
-	lv_indev_drv_register(&indev_drv);
+//    static lv_disp_drv_t disp_drv;         /*A variable to hold the drivers. Must be static or global.*/
+//    lv_disp_drv_init(&disp_drv);           /*Basic initialization*/
+//    disp_drv.draw_buf = &draw_buf;         /*Set an initialized buffer*/
+//    disp_drv.flush_cb = disp_driver_flush; /*Set a flush callback to draw to the display*/
+//    disp_drv.hor_res = 320;                /*Set the horizontal resolution in pixels*/
+//    disp_drv.ver_res = 240;                /*Set the vertical resolution in pixels*/
+//    lv_disp_drv_register(&disp_drv);       /*Register the driver and save the created display objects*/
+//    /*触摸屏输入接口配置*/
+// 	lv_indev_drv_t indev_drv;
+// 	lv_indev_drv_init(&indev_drv);
+// 	indev_drv.read_cb = touch_driver_read;
+// 	indev_drv.type = LV_INDEV_TYPE_POINTER;
+// 	lv_indev_drv_register(&indev_drv);
 
-   // esp_register_freertos_tick_hook(lv_tick_task);
+//    // esp_register_freertos_tick_hook(lv_tick_task);
 
+//   //touch.begin();
+//   lv_disp_draw_buf_init(&draw_buf, buf, NULL, screenWidth * screenHeight);
+//   /*Initialize the display*/
+//   static lv_disp_drv_t disp_drv;
+//   disp_drv.full_refresh = 1;
+//   lv_disp_drv_init(&disp_drv);
+//   disp_drv.sw_rotate = 1;             // add for rotation
+//   //disp_drv.rotated = LV_DISP_ROT_180; // add for rotation
+//   /*Change the following line to your display resolution*/
+//   disp_drv.hor_res = screenWidth;
+//   disp_drv.ver_res = screenHeight;
+//   disp_drv.flush_cb = lvgl_disp_flush_cb;
+//   disp_drv.draw_buf = &draw_buf;
+//   lv_disp_drv_register(&disp_drv);
 
-  //touch.begin();
-  lv_disp_draw_buf_init(&draw_buf, buf, NULL, screenWidth * screenHeight);
-  /*Initialize the display*/
-  static lv_disp_drv_t disp_drv;
-  disp_drv.full_refresh = 1;
-  lv_disp_drv_init(&disp_drv);
-  disp_drv.sw_rotate = 1;             // add for rotation
-  //disp_drv.rotated = LV_DISP_ROT_180; // add for rotation
-  /*Change the following line to your display resolution*/
-  disp_drv.hor_res = screenWidth;
-  disp_drv.ver_res = screenHeight;
-  disp_drv.flush_cb = lvgl_disp_flush_cb;
-  disp_drv.draw_buf = &draw_buf;
-  lv_disp_drv_register(&disp_drv);
-
-  // /*Initialize the (dummy) input device driver*/
-  // static lv_indev_drv_t indev_drv;
-  // lv_indev_drv_init(&indev_drv);
-  // indev_drv.type = LV_INDEV_TYPE_POINTER;
-  // indev_drv.read_cb = my_touchpad_read;
-  // user_indev_drv = lv_indev_drv_register(&indev_drv);
-
-
-  const esp_timer_create_args_t lvgl_tick_timer_args = {
-      .callback = &increase_lvgl_tick,
-      .name = "lvgl_tick"};
-
-  // const esp_timer_create_args_t reboot_timer_args = {
-  //     .callback = &example_increase_reboot,
-  //     .name = "reboot"};
-
-  esp_timer_handle_t lvgl_tick_timer = NULL;
-  esp_timer_create(&lvgl_tick_timer_args, &lvgl_tick_timer);
-  esp_timer_start_periodic(lvgl_tick_timer, EXAMPLE_LVGL_TICK_PERIOD_MS * 1000);
-
-  esp_timer_handle_t reboot_timer = NULL;
-  esp_timer_create(&reboot_timer_args, &reboot_timer);
-  esp_timer_start_periodic(reboot_timer, 2000 * 1000);
-
-  /*Or try out a demo. Don't forget to enable the demos in lv_conf.h. E.g. LV_USE_DEMOS_WIDGETS*/
-  // lv_demo_widgets();
-  // lv_demo_benchmark();
-  // lv_demo_keypad_encoder();
-  // lv_demo_music();
-  // lv_demo_printer();
-  // lv_demo_stress();
-  //    lv_fs_rawfs_init();
-
-  LOG_Serial.println("Setup done");
-  setup_ui(&guider_ui);
-  lv_obj_set_tile(guider_ui.main_1_tileview_1, guider_ui.main_1_tileview_1_tile_6, LV_ANIM_OFF);
-  for(uint16_t i=0;i<1000;i++){
-    lv_timer_handler(); /* let the GUI do its work */
-    delay(1);
-    if(i==100) bk_led_on();
-  }
-
-  
-}
-
-// 检查触摸有变化
-void check_touch_changed()
-{
-  //      static lv_indev_drv_t indev_drv;
-  uint16_t x;
-  uint16_t y;
-  uint16_t state;
-  // lv_indev_get_point(user_indev_drv, user_point);
-
-  x = user_indev_drv->proc.types.pointer.act_point.x;
-  y = user_indev_drv->proc.types.pointer.act_point.y;
-  state = user_indev_drv->proc.state;
-
-  LOG_Serial.printf("state=%d,point.x=%d point.y=%d", state, x, y);
-  //      LOG_Serial.printf("point.x=%d point.y=%d",user_point->x,user_point->y);
-}
+//   // /*Initialize the (dummy) input device driver*/
+//   // static lv_indev_drv_t indev_drv;
+//   // lv_indev_drv_init(&indev_drv);
+//   // indev_drv.type = LV_INDEV_TYPE_POINTER;
+//   // indev_drv.read_cb = my_touchpad_read;
+//   // user_indev_drv = lv_indev_drv_register(&indev_drv);
 
 
-void user_function(void){
-  setup_ui(&guider_ui);
-  // lv_obj_set_tile(guider_ui.main_1_tileview_1, guider_ui.main_1_tileview_1_tile_6, LV_ANIM_OFF);
-  // for(uint16_t i=0;i<1000;i++){
-  //   lv_timer_handler(); /* let the GUI do its work */
-  //   delay(1);
-  //   if(i==100) bk_led_on();
-  // }
+//   const esp_timer_create_args_t lvgl_tick_timer_args = {
+//       .callback = &increase_lvgl_tick,
+//       .name = "lvgl_tick"};
 
-  while(1){
-    lv_timer_handler(); /* let the GUI do its work */
-    delay(1);
-  }
+//   // const esp_timer_create_args_t reboot_timer_args = {
+//   //     .callback = &example_increase_reboot,
+//   //     .name = "reboot"};
+
+//   esp_timer_handle_t lvgl_tick_timer = NULL;
+//   esp_timer_create(&lvgl_tick_timer_args, &lvgl_tick_timer);
+//   esp_timer_start_periodic(lvgl_tick_timer, EXAMPLE_LVGL_TICK_PERIOD_MS * 1000);
+
+//   esp_timer_handle_t reboot_timer = NULL;
+//   esp_timer_create(&reboot_timer_args, &reboot_timer);
+//   esp_timer_start_periodic(reboot_timer, 2000 * 1000);
+
+//   /*Or try out a demo. Don't forget to enable the demos in lv_conf.h. E.g. LV_USE_DEMOS_WIDGETS*/
+//   // lv_demo_widgets();
+//   // lv_demo_benchmark();
+//   // lv_demo_keypad_encoder();
+//   // lv_demo_music();
+//   // lv_demo_printer();
+//   // lv_demo_stress();
+//   //    lv_fs_rawfs_init();
+
+//   LOG_Serial.println("Setup done");
+//   setup_ui(&guider_ui);
+//   lv_obj_set_tile(guider_ui.main_1_tileview_1, guider_ui.main_1_tileview_1_tile_6, LV_ANIM_OFF);
+//   for(uint16_t i=0;i<1000;i++){
+//     lv_timer_handler(); /* let the GUI do its work */
+//     delay(1);
+//     if(i==100) bk_led_on();
+//   }
+// }
+
+// // 检查触摸有变化
+// void check_touch_changed()
+// {
+//   //      static lv_indev_drv_t indev_drv;
+//   uint16_t x;
+//   uint16_t y;
+//   uint16_t state;
+//   // lv_indev_get_point(user_indev_drv, user_point);
+
+//   x = user_indev_drv->proc.types.pointer.act_point.x;
+//   y = user_indev_drv->proc.types.pointer.act_point.y;
+//   state = user_indev_drv->proc.state;
+
+//   LOG_Serial.printf("state=%d,point.x=%d point.y=%d", state, x, y);
+//   //      LOG_Serial.printf("point.x=%d point.y=%d",user_point->x,user_point->y);
+// }
 
 
-}
+// void user_function(void){
+//   setup_ui(&guider_ui);
+
+//   while(1){
+//     //lv_timer_handler(); /* let the GUI do its work */
+//     //delay(1);
+//   }
+// }
 
 void app_main(void)
 {
+
+
+  app_main_user_display();
+
+  while (1);
+
+
   esp_log_level_set("*", ESP_LOG_VERBOSE);
 
   board_dnesp32s3_init(); /* 硬件初始化 */
@@ -910,10 +839,7 @@ void app_main(void)
   ESP_LOGI(TAG, "ES8311 codec initialized successfully.");
 
 
-
-
-
-  user_function(); /* 启动GUI */
+//  user_function(); /* 启动GUI */
 
 
 
